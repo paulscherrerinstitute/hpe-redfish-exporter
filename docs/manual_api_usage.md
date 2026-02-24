@@ -1,7 +1,7 @@
 # Using HPE Redfish REST API Manually
 
 The HPE Redfish REST API can be accessed using `curl` (or similar tools). A
-username/password is need to request a session auth token.
+username/password is needed to request a session auth token.
 
 ## Examples
 
@@ -9,7 +9,7 @@ username/password is need to request a session auth token.
 
 The username/password for the session auth token are found at the project root
 in `.hpe_redfish_auth` in JSON format: `{ "username": <USERNAME>, "password":
-<PASSWORD> }`. The `<...>` should be supstituted into the following commands.
+<PASSWORD> }`. The `<...>` should be substituted into the following commands.
 
 ```console
  $ curl -D - -X POST -H "Content-Type: application/json" -d '{"UserName": "<USERNAME>", "Password": "<PASSWORD>"}' -k https://localhost:8081/redfish/v1/SessionService/Sessions | grep 'x-auth-token'
@@ -17,7 +17,48 @@ x-auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VyTmFtZSI6InJlZGZpc2hle
 ```
 
 The value of `x-auth-token` should be stored in an environment variable called
-`$HPE_RF_AUTH`, the all query commands use this.
+`$HPE_RF_AUTH`, which all query commands use.
+
+### Using the HPE Redfish Exporter Package
+
+With the new package structure, you can also use the exporter programmatically:
+
+```python
+from hpe_redfish_exporter import HPERedfishExporter, Config
+
+# Create configuration
+config = Config(
+    redfish_host="https://localhost:8081",
+    exporter_addr="127.0.0.1", 
+    exporter_port=9223,
+    auth_file=".hpe_redfish_auth"
+)
+
+# Load credentials
+if config.load_credentials():
+    # Create and run exporter
+    exporter = HPERedfishExporter(config)
+    exporter.run()
+```
+
+### CLI Usage
+
+The package provides a convenient CLI:
+
+```console
+# Show help
+hpe-redfish-exporter --help
+
+# Show version
+hpe-redfish-exporter --version
+
+# Run with custom configuration
+hpe-redfish-exporter \
+  --redfish-host "https://your-clustorstor:8081" \
+  --listen-addr "0.0.0.0" \
+  --listen-port 9223 \
+  --auth-file "/path/to/auth.json"
+```
 
 ### Get StorageSystems object
 

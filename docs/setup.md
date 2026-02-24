@@ -8,7 +8,9 @@ A Python `venv` can be created and used, to ensure we have a clean development e
 
 ## Creating the Venv
 
-NOTE: You only need to create the Venv ff the `.venv` directory does not exist!
+NOTE: You only need to create the Venv if the `.venv` directory does not exist!
+
+### Option 1: Traditional Installation (for running the script)
 
 ```console
 $ python -m venv redfish && mv redfish .venv && ls -a
@@ -17,4 +19,73 @@ $ python -m venv redfish && mv redfish .venv && ls -a
 $ source .venv/bin/activate
 
 $ pip install -r requirements.txt
+```
+
+### Option 2: Package Installation (recommended for development)
+
+```console
+$ python -m venv .venv
+$ source .venv/bin/activate
+$ pip install -e .
+```
+
+This will install the package in development mode, allowing you to make changes
+and test them immediately.
+
+## Running the Exporter
+
+### Using the installed package:
+```console
+$ source .venv/bin/activate
+$ hpe-redfish-exporter
+```
+
+### Using the wrapper script (backward compatibility):
+```console
+$ source .venv/bin/activate
+$ python hpe-redfish-exporter-wrapper.py
+```
+
+### With custom configuration:
+```console
+$ hpe-redfish-exporter \
+  --redfish-host "https://your-clustorstor:8081" \
+  --listen-addr "0.0.0.0" \
+  --listen-port 9223 \
+  --auth-file "/path/to/auth.json"
+```
+
+## Package Development
+
+To work on the package itself:
+
+```console
+# Install in development mode
+$ pip install -e .
+
+# Build the package
+$ python setup.py sdist bdist_wheel
+
+# Run tests (if available)
+$ python -m pytest
+```
+
+## Project Structure
+
+The project now follows a proper Python package structure:
+
+```
+hpe_redfish_exporter/
+├── __init__.py          # Package initialization
+├── cli.py               # CLI entry point
+├── core.py              # Core exporter functionality
+├── config.py            # Configuration management
+├── metrics.py           # Metrics collection logic
+├── redfish_client.py    # Redfish client wrapper
+└── utils.py             # Utility functions
+├── setup.py             # Package installation
+├── hpe-redfish-exporter-wrapper.py  # Backward compatibility
+├── docs/                # Documentation files
+├── .venv/               # Python virtual environment
+└── requirements.txt      # Python dependencies
 ```

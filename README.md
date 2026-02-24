@@ -34,9 +34,26 @@ This exporter queries HPE Redfish API endpoints to gather comprehensive system m
 
 ### Installation
 
+#### Option 1: Install as Python package (recommended)
+
 ```bash
 # Clone the repository
-git clone https://github.com/your-repo/hpe-redfish-exporter.git
+git clone https://github.com/paulscherrerinstitute/hpe-redfish-exporter.git
+cd hpe-redfish-exporter
+
+# Set up virtual environment
+python -m venv .venv
+source .venv/bin/activate
+
+# Install package in development mode
+pip install -e .
+```
+
+#### Option 2: Traditional installation
+
+```bash
+# Clone the repository
+git clone https://github.com/paulscherrerinstitute/hpe-redfish-exporter.git
 cd hpe-redfish-exporter
 
 # Set up virtual environment
@@ -49,24 +66,36 @@ pip install -r requirements.txt
 
 ### Configuration
 
-Edit the configuration section in `hpe-redfish-exporter.py`:
+Create `.hpe_redfish_auth` file with your credentials:
 
-```python
-# Redfish API configuration
-REDFISH_HOST = "https://localhost:8081"
-USERNAME     = "your-username"
-PASSWORD     = "your-password"
-
-# Prometheus exporter configuration
-EXPORTER_LISTEN_ADDR = "127.0.0.1"
-EXPORTER_LISTEN_PORT = 9223
+```json
+{
+  "username": "your-username",
+  "password": "your-password"
+}
 ```
 
 ### Running the Exporter
 
+#### Using installed package:
 ```bash
 source .venv/bin/activate
-python hpe-redfish-exporter.py
+hpe-redfish-exporter
+```
+
+#### Using wrapper script (backward compatibility):
+```bash
+source .venv/bin/activate
+python hpe-redfish-exporter-wrapper.py
+```
+
+#### With custom configuration:
+```bash
+hpe-redfish-exporter \
+  --redfish-host "https://your-clustorstor:8081" \
+  --listen-addr "0.0.0.0" \
+  --listen-port 9223 \
+  --auth-file "/path/to/auth.json"
 ```
 
 The exporter will start on `http://127.0.0.1:9223/metrics`
@@ -134,6 +163,21 @@ clustorstor_node_health{health="OK"}
 
 ## Development
 
+### Package Development
+
+To work on the package development:
+
+```bash
+# Install in development mode
+pip install -e .
+
+# Run tests (if available)
+python -m pytest
+
+# Build package
+python setup.py sdist bdist_wheel
+```
+
 ### Testing
 
 The exporter includes debug capabilities. To test Lustre metrics specifically:
@@ -146,10 +190,21 @@ curl -k -H "X-Auth-Token: $HPE_RF_AUTH" \
 
 ### Code Structure
 
-- `hpe-redfish-exporter.py` - Main exporter code
-- `docs/` - Documentation files
-- `.venv/` - Python virtual environment
-- `requirements.txt` - Python dependencies
+```
+hpe_redfish_exporter/
+├── __init__.py          # Package initialization
+├── cli.py               # CLI entry point
+├── core.py              # Core exporter functionality
+├── config.py            # Configuration management
+├── metrics.py           # Metrics collection logic
+├── redfish_client.py    # Redfish client wrapper
+└── utils.py             # Utility functions
+├── setup.py             # Package installation
+├── hpe-redfish-exporter-wrapper.py  # Backward compatibility
+├── docs/                # Documentation files
+├── .venv/               # Python virtual environment
+└── requirements.txt      # Python dependencies
+```
 
 ## Troubleshooting
 

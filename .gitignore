@@ -5,3 +5,8 @@
 __pycache__/
 *.py[codz]
 *$py.class
+
+# python setup
+*.egg-info/
+build/
+dist/

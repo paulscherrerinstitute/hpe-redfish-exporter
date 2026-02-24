@@ -11,6 +11,8 @@ The exporter queries HPE Redfish API endpoints to gather comprehensive Lustre fi
 - Export counts and filesystem status
 - Target-specific metrics for both MDT and OST targets
 
+**Note**: This documentation applies to version 2.0.0+ of the HPE Redfish Exporter, which has been restructured as an installable Python package.
+
 ## API Endpoints Used
 
 The exporter collects Lustre metrics from the following HPE Redfish API endpoints:
