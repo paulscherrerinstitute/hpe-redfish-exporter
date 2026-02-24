@@ -7,7 +7,7 @@ username/password is need to request a session auth token.
 
 ### Generate the Auth Token
 
-THe username/password for the session auth token are found at the project root
+The username/password for the session auth token are found at the project root
 in `.hpe_redfish_auth` in JSON format: `{ "username": <USERNAME>, "password":
 <PASSWORD> }`. The `<...>` should be supstituted into the following commands.
 
