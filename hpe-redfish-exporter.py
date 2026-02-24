@@ -165,23 +165,60 @@ def collect_metrics():
                 lustre_target_type = lustre_fs_info.get("TargetType", "unknown")
                 lustre_stats = lustre_fs_info.get("Statistics", {})
 
-                metrics.append(f'{lustre_stats}')
-
                 # Collect individual target metrics (IOPS, bandwidth, etc.)
-                if lustre_stats:
-                    # IO operations
-                    for metric_name in ['read', 'write', 'open', 'close', 'create', 'destroy']:
-                        if metric_name in lustre_stats:
-                            metrics.append(
-                                f'clustorstor_lustre_{metric_name}_ops{prom_kv({"filesystem": lustre_fs_name, "target": lustre_target, "type": lustre_target_type})} {lustre_stats[metric_name]}'
-                            )
-                    
-                    # Space metrics
-                    for metric_name in ['free_space', 'total_space', 'free_inodes', 'total_inodes']:
-                        if metric_name in lustre_stats:
-                            metrics.append(
-                                f'clustorstor_lustre_{metric_name}_bytes{prom_kv({"filesystem": lustre_fs_name, "target": lustre_target, "type": lustre_target_type})} {lustre_stats[metric_name]}'
-                            )
+                if lustre_stats and isinstance(lustre_stats, dict):
+                    for stat_key, stat_value in lustre_stats.items():
+                        # Parse statistics in format like "OST0000 read" or "MDT0000 free_space"
+                        try:
+                            # Extract metric name (all parts after the target identifier)
+                            parts = stat_key.split()
+                            if len(parts) >= 2:
+                                # Join all parts after the first one (target identifier) to get full metric name
+                                metric_name = "_".join(parts[1:])  # e.g., "free_inodes", "total_space"
+                                
+                                # Clean up metric name for Prometheus
+                                clean_metric_name = metric_name.lower().replace("(", "").replace(")", "").replace("-", "_").replace(" ", "_")
+                                
+                                # Convert string value to numeric
+                                numeric_value = float(stat_value)
+                                
+                                # Create appropriate Prometheus metric based on metric type
+                                labels = {
+                                    "filesystem": lustre_fs_name,
+                                    "target": lustre_target,
+                                    "type": lustre_target_type,
+                                    "metric": clean_metric_name
+                                }
+                                
+                                metrics.append(
+                                    f'clustorstor_lustre_metric{prom_kv(labels)} {numeric_value}'
+                                )
+                                
+                                # Also create specific metrics for common operations
+                                if clean_metric_name in ['read', 'write']:
+                                    metrics.append(
+                                        f'clustorstor_lustre_{clean_metric_name}_ops{prom_kv({"filesystem": lustre_fs_name, "target": lustre_target, "type": lustre_target_type})} {numeric_value}'
+                                    )
+                                elif clean_metric_name in ['free_space', 'total_space', 'used_space', 'available_space']:
+                                    metrics.append(
+                                        f'clustorstor_lustre_{clean_metric_name}_bytes{prom_kv({"filesystem": lustre_fs_name, "target": lustre_target, "type": lustre_target_type})} {numeric_value}'
+                                    )
+                                elif clean_metric_name in ['free_inodes', 'total_inodes', 'used_inodes']:
+                                    metrics.append(
+                                        f'clustorstor_lustre_{clean_metric_name}{prom_kv({"filesystem": lustre_fs_name, "target": lustre_target, "type": lustre_target_type})} {numeric_value}'
+                                    )
+                                elif clean_metric_name == 'num_exports':
+                                    metrics.append(
+                                        f'clustorstor_lustre_exports{prom_kv({"filesystem": lustre_fs_name, "target": lustre_target, "type": lustre_target_type})} {numeric_value}'
+                                    )
+                                elif clean_metric_name == 'percent_free_space':
+                                    metrics.append(
+                                        f'clustorstor_lustre_free_space_percent{prom_kv({"filesystem": lustre_fs_name, "target": lustre_target, "type": lustre_target_type})} {numeric_value}'
+                                    )
+                                
+                        except (ValueError, IndexError):
+                            # Skip malformed or non-numeric statistics
+                            continue
 
     # --------------------------------------------------------------------------
     # TELEMETRY SERVICE - LUSTRE AND LINUX STATISTICS
