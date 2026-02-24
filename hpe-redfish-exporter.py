@@ -14,12 +14,14 @@ import time
 # ------------------------------------------------------------------------------
 
 REDFISH_HOST = "https://localhost:8081"
-USERNAME     = "your-username"
-PASSWORD     = "your-password"
 
 # Prometheus exporter HTTP server
 EXPORTER_LISTEN_ADDR = "127.0.0.1"
 EXPORTER_LISTEN_PORT = 9223
+
+# Credentials will be loaded from .hpe_redfish_auth file
+USERNAME = None
+PASSWORD = None
 
 
 # ------------------------------------------------------------------------------
@@ -27,6 +29,11 @@ EXPORTER_LISTEN_PORT = 9223
 # ------------------------------------------------------------------------------
 
 def get_client():
+    # Load credentials from file if not already loaded
+    if USERNAME is None or PASSWORD is None:
+        if not load_credentials():
+            raise Exception("Failed to load credentials from .hpe_redfish_auth file")
+    
     client = redfish_client(
         base_url=REDFISH_HOST,
         username=USERNAME,
@@ -41,6 +48,35 @@ def get_client():
 # ------------------------------------------------------------------------------
 # HELPERS
 # ------------------------------------------------------------------------------
+
+def load_credentials():
+    """Load credentials from .hpe_redfish_auth file"""
+    global USERNAME, PASSWORD
+    
+    auth_file = ".hpe_redfish_auth"
+    
+    try:
+        with open(auth_file, 'r') as f:
+            import json
+            auth_data = json.load(f)
+            USERNAME = auth_data.get('username', '')
+            PASSWORD = auth_data.get('password', '')
+            
+        if not USERNAME or not PASSWORD:
+            raise ValueError("Missing username or password in auth file")
+            
+    except FileNotFoundError:
+        print(f"ERROR: Auth file {auth_file} not found")
+        return False
+    except json.JSONDecodeError:
+        print(f"ERROR: Invalid JSON format in {auth_file}")
+        return False
+    except Exception as e:
+        print(f"ERROR: Failed to load credentials: {e}")
+        return False
+    
+    return True
+
 
 def prom_kv(label_dict):
     parts = [f'{k}="{v}"' for k, v in label_dict.items()]
