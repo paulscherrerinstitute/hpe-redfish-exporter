@@ -1,0 +1,7 @@
+# secrets
+.hpe_redfish_auth
+
+# python related
+__pycache__/
+*.py[codz]
+*$py.class
