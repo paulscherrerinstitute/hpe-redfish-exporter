@@ -4,40 +4,99 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
 
 ## [Unreleased]
 
-## [1.1.0] - 2024-02-24
+## [2.0.0] - 2026-02-24
 
-### Fixed
-- **Lustre Filesystem Statistics Collection**: Fixed broken Lustre metrics collection that was caused by:
-  - Incorrect parsing of HPE Redfish API's compound statistic keys (e.g., "OST0000 read" instead of simple "read")
-  - Bug on line 155 that was appending entire statistics dictionary as string instead of individual metrics
-  - Wrong assumption about statistics data structure
+### 🚀 Major Architecture Change: Converted to Installable Python Package
 
 ### Added
-- **Comprehensive Lustre Metrics Documentation**: Created detailed documentation in `docs/lustre-metrics.md` covering:
-  - API endpoints and statistics format
-  - All Prometheus metrics generated
-  - Query examples and troubleshooting
-  - Implementation details
+- **Installable Python Package**: Complete restructuring as a proper Python package with:
+  - `setup.py` with all dependencies and entry points
+  - Proper module structure (`hpe_redfish_exporter/`)
+  - Package metadata and version management
+  - Wheel and source distribution support
 
-- **Project README**: Added comprehensive `README.md` with:
-  - Project overview and features
-  - Quick start guide
-  - Configuration instructions
-  - Metrics documentation
-  - Example queries
-  - Development and troubleshooting information
+- **Modular Code Structure**: Split functionality into logical modules:
+  - `cli.py`: CLI entry point with argument parsing
+  - `core.py`: Core exporter functionality (Flask app)
+  - `config.py`: Configuration management
+  - `metrics.py`: Metrics collection logic
+  - `redfish_client.py`: Redfish client wrapper
+  - `utils.py`: Utility functions
+
+- **CLI Enhancements**: New command-line interface with:
+  - `--redfish-host`: Configure Redfish API endpoint
+  - `--listen-addr`: Configure listen address
+  - `--listen-port`: Configure listen port
+  - `--auth-file`: Configure authentication file path
+  - `--version`: Show version information
+  - `--help`: Comprehensive help text
+
+- **Programmatic API**: Can now be imported and used as a library:
+  ```python
+  from hpe_redfish_exporter import HPERedfishExporter, Config
+  config = Config(redfish_host="https://host:8081")
+  exporter = HPERedfishExporter(config)
+  exporter.run()
+  ```
+
+- **Health Endpoint**: Added `/health` endpoint for monitoring
+- **Backward Compatibility**: Wrapper script for existing users
 
 ### Changed
-- **Lustre Statistics Parsing**: Completely rewrote the statistics parsing logic to:
-  - Properly handle compound metric names (e.g., "OST0000 free_space" → "free_space")
-  - Generate both generic and specific Prometheus metrics
-  - Include robust error handling for malformed data
-  - Convert string values to proper numeric types
+- **Package Version**: Updated to 2.0.0 to reflect major architecture changes
+- **Configuration System**: Enhanced configuration management with validation
+- **Error Handling**: Improved error handling throughout all modules
+- **Code Organization**: Professional module structure following Python best practices
+- **Type Annotations**: Added comprehensive type hints throughout the codebase
 
-- **Metric Generation**: Enhanced to produce:
-  - Generic metrics: `clustorstor_lustre_metric{metric="..."}` for all statistics
-  - Specific metrics: Dedicated metrics for common operations (IO ops, space, inodes, etc.)
-  - Proper Prometheus labels: `filesystem`, `target`, `type`, and `metric`
+### Fixed
+- **Version Consistency**: Fixed version mismatch between module and changelog
+- **Installation Process**: Proper package installation with `pip install -e .`
+
+### Technical Details
+
+**Files Added:**
+- `hpe_redfish_exporter/__init__.py` - Package initialization
+- `hpe_redfish_exporter/cli.py` - CLI entry point
+- `hpe_redfish_exporter/core.py` - Core exporter functionality
+- `hpe_redfish_exporter/config.py` - Configuration management
+- `hpe_redfish_exporter/metrics.py` - Metrics collection logic
+- `hpe_redfish_exporter/redfish_client.py` - Redfish client wrapper
+- `hpe_redfish_exporter/utils.py` - Utility functions
+- `setup.py` - Package installation configuration
+- `MANIFEST.in` - Package data inclusion
+- `hpe-redfish-exporter-wrapper.py` - Backward compatibility wrapper
+
+**Files Modified:**
+- `README.md` - Updated with new installation and usage instructions
+- `CHANGELOG.md` - Updated with version 2.0.0 changes
+- `requirements.txt` - Maintained dependencies
+
+### Migration Guide
+
+**For existing users:**
+1. Install the new package: `pip install -e .`
+2. Use the new CLI: `hpe-redfish-exporter`
+3. Or use the wrapper: `python hpe-redfish-exporter-wrapper.py`
+
+**For new users:**
+1. Install: `pip install -e .`
+2. Configure: Create `.hpe_redfish_auth` file
+3. Run: `hpe-redfish-exporter`
+
+### Breaking Changes
+
+- **CLI Command**: Changed from `python hpe-redfish-exporter.py` to `hpe-redfish-exporter`
+- **Configuration**: Now uses command-line arguments instead of editing source file
+- **Import Paths**: If importing (unlikely for most users), paths have changed
+
+### Benefits
+
+- **Professional Installation**: Standard Python package installation
+- **Better Maintainability**: Clear module separation
+- **Programmatic Use**: Can be used as a library
+- **Standard Practices**: Follows Python packaging best practices
+- **Future-Proof**: Easy to add new features and maintain
 
 ### Technical Details
 
@@ -57,7 +116,7 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
 - `clustorstor_lustre_free_space_percent`
 - `clustorstor_lustre_metric{metric="..."}` (generic metric for all statistics)
 
-## [1.0.0] - 2024-02-23
+## [1.0.0] - 2026-02-23
 
 ### Added
 - Initial release of HPE Redfish Exporter
