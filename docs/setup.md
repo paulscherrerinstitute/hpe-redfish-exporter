@@ -52,8 +52,23 @@ $ hpe-redfish-exporter \
   --redfish-host "https://your-clustorstor:8081" \
   --listen-addr "0.0.0.0" \
   --listen-port 9223 \
-  --auth-file "/path/to/auth.json"
+  --auth-file "/path/to/auth.json" \
+  --parallel-workers 20 \
+  --cache-ttl 30 \
+  --events-limit 100 \
+  --debug-timing
 ```
+
+### Performance Options
+
+The exporter supports performance tuning via CLI arguments:
+
+- `--parallel-workers`: Number of parallel API requests (default: 20)
+- `--cache-ttl`: Cache TTL in seconds for top-level endpoints (default: 30)
+- `--events-limit`: Limit number of events to fetch (optional, default: all)
+- `--debug-timing`: Enable timing output for debugging (default: off)
+
+See [README.md](../README.md) for detailed performance tuning information.
 
 ## Package Development
 
