@@ -19,6 +19,10 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
   - Returns `None` for invalid events instead of crashing
   - Maintains existing functionality while adding robustness
 
+- **GPL-3.0 License**: Added GNU General Public License v3.0 or later
+  - License file: `LICENSE`
+  - License notice added to `README.md`
+
 ### Changed
 - **Package Version**: Updated to 2.2.0 to reflect enhanced error handling
 - **Event Processing**: More defensive programming in `_collect_events` method
@@ -33,6 +37,7 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
 
 **Files Modified:**
 - `hpe_redfish_exporter/metrics.py`: Enhanced `_collect_events` method with validation
+- `README.md`: Added license information
 
 **Key Changes:**
 - Added explicit type and structure validation
