@@ -9,7 +9,7 @@ from .core import HPERedfishExporter
 from .cli import main
 from .config import Config
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __author__ = "HPE ClusterStor Exporter Team"
 __license__ = "MIT"
 
