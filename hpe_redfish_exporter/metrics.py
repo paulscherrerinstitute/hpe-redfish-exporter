@@ -128,8 +128,8 @@ class MetricsCollector:
         self.debug_timing = config.debug_timing
         self.client_wrapper = RedfishClientWrapper(
             base_url=config.redfish_host,
-            username=config.username or "",
-            password=config.password or "",
+            username=config.username,
+            password=config.password,
         )
         self.cache = ResponseCache(ttl=config.cache_ttl)
         self._parallel_fetcher: Optional[ParallelFetcher] = None
@@ -215,7 +215,7 @@ class MetricsCollector:
         metrics.append(f"clustorstor_nodes_count {len(members)}")
 
         # Get all node URLs
-        node_urls = [node.get("@odata.id") for node in members if node.get("@odata.id")]
+        node_urls = [node.get("@odata.id") for node in members if "@odata.id" in node]
 
         # Parallel fetch nodes
         def process_node(url: str, result: Any) -> Optional[Dict]:
@@ -257,7 +257,7 @@ class MetricsCollector:
                     nic_urls = [
                         nic.get("@odata.id")
                         for nic in nics.dict.get("Members", [])
-                        if nic.get("@odata.id")
+                        if "@odata.id" in nic
                     ]
 
                     def process_nic(
@@ -469,7 +469,7 @@ class MetricsCollector:
         metrics.append(f"clustorstor_events_total {len(event_members)}")
 
         # Get all event URLs
-        event_urls = [e.get("@odata.id") for e in event_members if e.get("@odata.id")]
+        event_urls = [e.get("@odata.id") for e in event_members if "@odata.id" in e]
 
         # Parallel fetch events
         def process_event(url: str, result: Any) -> Optional[str]:

@@ -10,7 +10,7 @@ import urllib3
 class RedfishClientWrapper:
     """Wrapper for Redfish client with safe operations"""
     
-    def __init__(self, base_url: str, username: str, password: str, timeout: int = 10):
+    def __init__(self, base_url: str, username: str = "", password: str = "", timeout: int = 10):
         self.base_url = base_url
         self.username = username
         self.password = password
