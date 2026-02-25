@@ -13,4 +13,10 @@ def prom_kv(label_dict: Dict[str, Any]) -> str:
 
 def clean_metric_name(name: str) -> str:
     """Clean metric name for Prometheus compatibility"""
-    return name.lower().replace("(", "").replace(")", "").replace("-", "_").replace(" ", "_")
+    return (
+        name.lower()
+        .replace("(", "")
+        .replace(")", "")
+        .replace("-", "_")
+        .replace(" ", "_")
+    )

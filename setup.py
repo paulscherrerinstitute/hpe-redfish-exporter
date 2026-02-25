@@ -46,7 +46,15 @@ setup(
         "Topic :: System :: Monitoring",
         "Topic :: System :: Networking :: Monitoring",
     ],
-    keywords=["prometheus", "exporter", "redfish", "hpe", "clustorstor", "lustre", "monitoring"],
+    keywords=[
+        "prometheus",
+        "exporter",
+        "redfish",
+        "hpe",
+        "clustorstor",
+        "lustre",
+        "monitoring",
+    ],
     project_urls={
         "Source": "https://github.com/paulscherrerinstitute/hpe-redfish-exporter",
         "Tracker": "https://github.com/paulscherrerinstitute/hpe-redfish-exporter/issues",
