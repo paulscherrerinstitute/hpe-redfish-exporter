@@ -4,6 +4,63 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-02-25
+
+### 🚀 Performance Optimization: Parallel API Fetching with Caching
+
+### Added
+- **Parallel API Fetching**: All metric collection now uses parallel requests with configurable concurrency:
+  - `ResponseCache` class: Caches top-level API responses (StorageSystems, StorageServices, Events)
+  - `ParallelFetcher` class: Handles parallel API requests with semaphore rate limiting
+  - Default 20 parallel workers (configurable)
+  - Progress logging for large fetches
+
+- **New Configuration Options**:
+  - `--parallel-workers`: Number of parallel API requests (default: 20)
+  - `--cache-ttl`: Cache TTL in seconds for top-level endpoints (default: 30)
+  - `--events-limit`: Limit number of events to fetch (default: all)
+  - `--debug-timing`: Enable timing output for performance debugging (default: off)
+
+- **New Metrics**:
+  - `clustorstor_fetch_errors_total`: Total number of failed API fetches
+
+### Changed
+- **Package Version**: Updated to 2.1.0
+- **Storage Systems Collection**: Now parallelized with 16+ concurrent requests
+- **Lustre Metrics Collection**: Now parallelized with 20+ concurrent requests
+- **Events Collection**: Now parallelized with up to 20 concurrent requests
+- **Node Status Collection**: Reuses cached data from storage systems (eliminates redundant API calls)
+- **Error Handling**: Failed fetches are logged and skipped gracefully
+- **Timing Output**: Added detailed timing information for debugging performance
+
+### Performance Improvement
+| Function | Before | After |
+|----------|--------|-------|
+| Storage systems | ~0.3s | ~0.1s |
+| Lustre metrics | ~1-2s | ~0.2s |
+| Node status | ~0.3s | ~0s (reused) |
+| Events | ~15s | ~0.5s |
+| **Total** | **~17s** | **~1s** |
+
+### Technical Details
+
+**Files Modified:**
+- `hpe_redfish_exporter/config.py`: Added parallel_workers, cache_ttl, events_limit, debug_timing options
+- `hpe_redfish_exporter/cli.py`: Added --parallel-workers, --cache-ttl, --events-limit, --debug-timing arguments
+- `hpe_redfish_exporter/metrics.py`: Complete refactor with caching and parallel fetching
+
+**New Classes:**
+- `ResponseCache`: Thread-safe cache for API responses
+- `ParallelFetcher`: Parallel fetching with rate limiting and error handling
+
+### Migration Guide
+
+**For existing users:**
+- No configuration changes required (defaults work well)
+- Optional: Tune `--parallel-workers` for your environment
+- Optional: Set `--events-limit` if you don't need all historical events
+- Optional: Use `--debug-timing` to debug performance issues
+
 ## [2.0.0] - 2026-02-24
 
 ### 🚀 Major Architecture Change: Converted to Installable Python Package

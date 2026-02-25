@@ -9,13 +9,17 @@ from typing import Optional, Dict, Any
 
 class Config:
     """Configuration management for HPE Redfish Exporter"""
-    
+
     def __init__(
         self,
         redfish_host: str = "https://localhost:8081",
         exporter_addr: str = "127.0.0.1",
         exporter_port: int = 9223,
-        auth_file: str = ".hpe_redfish_auth"
+        auth_file: str = ".hpe_redfish_auth",
+        parallel_workers: int = 20,
+        cache_ttl: int = 30,
+        events_limit: Optional[int] = None,
+        debug_timing: bool = False,
     ):
         self.redfish_host = redfish_host
         self.exporter_addr = exporter_addr
@@ -23,24 +27,28 @@ class Config:
         self.auth_file = auth_file
         self.username: Optional[str] = None
         self.password: Optional[str] = None
-        
+        self.parallel_workers = parallel_workers
+        self.cache_ttl = cache_ttl
+        self.events_limit = events_limit
+        self.debug_timing = debug_timing
+
     def load_credentials(self) -> bool:
         """Load credentials from auth file"""
         try:
             if not os.path.exists(self.auth_file):
                 print(f"ERROR: Auth file {self.auth_file} not found")
                 return False
-                
-            with open(self.auth_file, 'r') as f:
+
+            with open(self.auth_file, "r") as f:
                 auth_data = json.load(f)
-                self.username = auth_data.get('username', '')
-                self.password = auth_data.get('password', '')
-                
+                self.username = auth_data.get("username", "")
+                self.password = auth_data.get("password", "")
+
             if not self.username or not self.password:
                 raise ValueError("Missing username or password in auth file")
-                
+
             return True
-            
+
         except json.JSONDecodeError:
             print(f"ERROR: Invalid JSON format in {self.auth_file}")
             return False
@@ -57,8 +65,12 @@ class Config:
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary"""
         return {
-            'redfish_host': self.redfish_host,
-            'exporter_addr': self.exporter_addr,
-            'exporter_port': self.exporter_port,
-            'auth_file': self.auth_file
+            "redfish_host": self.redfish_host,
+            "exporter_addr": self.exporter_addr,
+            "exporter_port": self.exporter_port,
+            "auth_file": self.auth_file,
+            "parallel_workers": self.parallel_workers,
+            "cache_ttl": self.cache_ttl,
+            "events_limit": self.events_limit,
+            "debug_timing": self.debug_timing,
         }
