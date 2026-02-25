@@ -474,7 +474,21 @@ class MetricsCollector:
         # Parallel fetch events
         def process_event(url: str, result: Any) -> Optional[str]:
             if result and result.status == 200:
-                return result.dict.get("Severity", "Unknown")
+                # Get the event object
+                event_data = result.dict
+
+                # Note that not every API call include this field
+                event_msgs_count = event_data.get("Events@odata.count", 1)
+
+                # Get array of message(s)
+                event_msgs = event_data.get("Events", [])
+
+                # The API docs indicate that there should only ever be one message
+                if event_msgs_count != 1 and len(event_msgs) != event_msgs_count:
+                    return None
+
+                # Get severity from the event data
+                return event_msgs[0].get("Severity", "Unknown")
             return None
 
         severities = self._parallel_fetcher.fetch(event_urls, process_event, "events")

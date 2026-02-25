@@ -3,21 +3,21 @@
 ## Project Overview
 
 **Purpose**: Prometheus exporter for HPE ClusterStor systems using Redfish API
-**Main File**: `hpe-redfish-exporter.py`
 **Language**: Python 3.8+
+**Structure**: Modular Python package with `hpe_redfish_exporter/` directory
 
 ## Key Responsibilities
 
 ### Code Maintenance
-- **Primary Focus**: `hpe-redfish-exporter.py` - Main exporter logic
+- **Primary Focus**: `hpe_redfish_exporter/metrics.py` - Main metrics collection
 - **Secondary Files**: Documentation in `docs/` directory
 - **Configuration**: Environment variables and `.hpe_redfish_auth` file
 
 ### Common Tasks
 
 #### 1. Bug Fixes
-- **Lustre Metrics**: Lines 120-200 (StorageServices/FileSystems parsing)
-- **System Metrics**: Lines 50-120 (StorageSystems collection)
+- **Lustre Metrics**: Lines 340-400 in `metrics.py` (StorageServices/FileSystems parsing)
+- **System Metrics**: Lines 200-340 in `metrics.py` (StorageSystems collection)
 - **Error Handling**: `safe_get()` function and try/catch blocks
 
 #### 2. Feature Enhancements
@@ -26,7 +26,7 @@
 - **Prometheus Format**: Use `prom_kv()` helper for labels
 
 #### 3. Documentation
-- **User Docs**: Update `README.md` and `docs/lustre-metrics.md`
+- **User Docs**: Update `README.md` and `docs/*.md`
 - **Technical Docs**: Add implementation details to relevant files
 - **Changelog**: Add entries to `CHANGELOG.md`
 
@@ -66,18 +66,18 @@ def safe_get(client, path):
 - `collect_metrics()`: Main metrics collection
 
 ### Metric Collection Sections
-1. **Storage Systems** (Lines 50-120): Node health, power, network
-2. **Lustre Filesystem** (Lines 120-200): IO ops, capacity, inodes
-3. **Telemetry Service** (Lines 200-220): Metric reports (currently passive)
-4. **Node Status** (Lines 220-260): CPU, memory, load averages
-5. **Event Service** (Lines 260-280): Event history
+1. **Storage Systems** (Lines 200-340): Node health, power, network
+2. **Lustre Filesystem** (Lines 340-400): IO ops, capacity, inodes
+3. **Telemetry Service** (Lines 400-420): Metric reports (currently passive)
+4. **Node Status** (Lines 420-460): CPU, memory, load averages
+5. **Event Service** (Lines 460-500): Event history
 
 ## Common Issues
 
 ### Lustre Metrics Problems
 - **Check**: Statistics format from `/redfish/v1/StorageServices/*/FileSystems/*`
 - **Pattern**: Keys like `"OST0000 free_space"` (not simple `"free_space"`)
-- **Fix Location**: Lines 157-200 in `collect_metrics()`
+- **Fix Location**: Lines 340-400 in `metrics.py`
 
 ### API Connectivity
 - **Verify**: Redfish endpoint accessibility
@@ -98,24 +98,31 @@ curl -k -H "X-Auth-Token: $HPE_RF_AUTH" \
 - **Expected**: Valid Prometheus format with proper labels
 - **Verify**: All expected metrics present
 
-## Documentation Standards
+## Documentation Strategy
 
-### File Locations
-- **User Guides**: `README.md`, `docs/*.md`
-- **Technical Docs**: In-code comments for complex logic
-- **API Reference**: `docs/ClusterStor-Redfish-Swordfish-REST-API-7.2-030.pdf`
+### Initial Setup
+- **Read**: `README.md`, `CHANGELOG.md`, and `AGENTS.md` first
+- **Wait**: Don't read `docs/` directory until specifically instructed
+- **Purpose**: Understand project overview, recent changes, and agent instructions
 
-### Update Rules
-1. **New Features**: Add to README + create dedicated doc if complex
-2. **Bug Fixes**: Update CHANGELOG + relevant documentation
-3. **API Changes**: Document in both code comments and user docs
+### When to Read Docs/
+- **Specific Feature**: When working on a documented feature
+- **API Questions**: When API behavior needs clarification
+- **Complex Issues**: When troubleshooting requires detailed documentation
+- **New Implementation**: When adding features with existing documentation
+
+### Documentation Standards
+- **Updates**: Reflect changes in `README.md` and `CHANGELOG.md`
+- **New Features**: Create dedicated docs in `docs/` if complex
+- **Bug Fixes**: Document in `CHANGELOG.md` + relevant docs
+- **API Changes**: Update both code comments and user docs
 
 ## Quick Reference
 
 ### Common Commands
 ```bash
 # Run exporter
-source .venv/bin/activate && python hpe-redfish-exporter.py
+source .venv/bin/activate && python -m hpe_redfish_exporter
 
 # Test API
 curl -k -H "X-Auth-Token: $HPE_RF_AUTH" https://localhost:8081/redfish/v1/StorageSystems

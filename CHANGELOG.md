@@ -2,7 +2,57 @@
 
 All notable changes to the HPE Redfish Exporter project will be documented in this file.
 
-## [Unreleased]
+## [2.2.0] - 2026-02-25
+
+### 🔧 Events Collection: Enhanced Error Handling and Validation
+
+### Added
+- **Enhanced Error Handling**: Improved validation in events collection with explicit checks:
+  - Validates event data structure before processing
+  - Checks for proper message count consistency
+  - Handles cases where API response doesn't match expected format
+  - Graceful fallback for malformed or unexpected data
+
+- **Better Error Reporting**: More informative error handling in event processing:
+  - Validates that `Events` field exists and is a list
+  - Checks that message count matches actual array length
+  - Returns `None` for invalid events instead of crashing
+  - Maintains existing functionality while adding robustness
+
+### Changed
+- **Package Version**: Updated to 2.2.0 to reflect enhanced error handling
+- **Event Processing**: More defensive programming in `_collect_events` method
+- **API Validation**: Added structure validation for Redfish API responses
+
+### Fixed
+- **API Inconsistency Handling**: Better handling of unexpected API response formats
+- **Error Resilience**: Prevents crashes from malformed event data
+- **Data Validation**: Ensures proper message count before processing
+
+### Technical Details
+
+**Files Modified:**
+- `hpe_redfish_exporter/metrics.py`: Enhanced `_collect_events` method with validation
+
+**Key Changes:**
+- Added explicit type and structure validation
+- Improved error handling for API inconsistencies
+- Better handling of unexpected response formats
+- Maintained existing functionality while adding robustness
+
+### Migration Guide
+
+**For existing users:**
+- No configuration changes required
+- Improved reliability when API responses vary
+- Better error handling without breaking changes
+- Enhanced logging for debugging issues
+
+**Benefits:**
+- More resilient to API inconsistencies
+- Better error reporting and handling
+- Prevents crashes from malformed data
+- Maintains existing functionality
 
 ## [2.1.0] - 2026-02-25
 
@@ -91,9 +141,20 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
 - **Programmatic API**: Can now be imported and used as a library:
   ```python
   from hpe_redfish_exporter import HPERedfishExporter, Config
-  config = Config(redfish_host="https://host:8081")
-  exporter = HPERedfishExporter(config)
-  exporter.run()
+  
+  # Create configuration
+  config = Config(
+      redfish_host="https://localhost:8081",
+      exporter_addr="127.0.0.1", 
+      exporter_port=9223,
+      auth_file=".hpe_redfish_auth"
+  )
+  
+  # Load credentials
+  if config.load_credentials():
+      # Create and run exporter
+      exporter = HPERedfishExporter(config)
+      exporter.run()
   ```
 
 - **Health Endpoint**: Added `/health` endpoint for monitoring
