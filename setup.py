@@ -15,12 +15,14 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="hpe-redfish-exporter",
-    version="2.3.0",
+    version="2.3.1",
     description="Prometheus exporter for HPE ClusterStor systems using Redfish API",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="HPE ClusterStor Exporter Team",
     author_email="",
+    license="GPL-3.0-or-later",
+    license_files=("LICENSE",),
     url="https://github.com/paulscherrerinstitute/hpe-redfish-exporter",
     packages=find_packages(),
     install_requires=requirements,
@@ -33,7 +35,6 @@ setup(
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: System Administrators",
-        "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",

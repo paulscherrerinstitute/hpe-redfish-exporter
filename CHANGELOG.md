@@ -2,6 +2,67 @@
 
 All notable changes to the HPE Redfish Exporter project will be documented in this file.
 
+## [2.3.1] - 2026-02-26
+
+### 🚀 RPM Package Support: Added RPM spec files for distribution
+
+### Added
+- **RPM Package Support**: Added RPM spec files for building RPM packages:
+  - `hpe-redfish-exporter.spec`: Main RPM spec file for HPE Redfish Exporter
+  - `contrib/python-redfish.spec`: RPM spec file for python-redfish module
+  
+- **RPM Build Instructions**: Added documentation for building RPM packages:
+  - `python3 setup.py bdist_rpm` - Build RPM from source
+  - Manual RPM build process documentation
+  
+- **Package Dependencies**: Updated requirements for RPM building:
+  - `python3-devel` - Python development files
+  - `python3-setuptools` - Python setuptools for RPM building
+  
+### Changed
+- **Package Version**: Updated to 2.3.1 to reflect RPM package support
+- **Documentation**: Added RPM build instructions to project documentation
+
+### Fixed
+- **Build Process**: Improved RPM build process with proper source tarball handling
+- **Package Structure**: Updated package structure for RPM compatibility
+
+### Technical Details
+
+**Files Added:**
+- `hpe-redfish-exporter.spec` - Main RPM spec file
+- `contrib/python-redfish.spec` - Python-redfish RPM spec file
+
+**RPM Build Commands:**
+```bash
+# Install build dependencies
+python3 -m pip install --user setuptools wheel
+
+# Build RPM package
+python3 setup.py bdist_rpm
+
+# Or manually using rpmbuild
+rpmbuild -bb hpe-redfish-exporter.spec
+```
+
+**RPM Package Contents:**
+- Main executable: `/usr/bin/hpe-redfish-exporter`
+- Python modules: `/usr/lib/python3.X/site-packages/hpe_redfish_exporter/`
+- Documentation: `/usr/share/doc/hpe-redfish-exporter/`
+- License: `/usr/share/licenses/hpe-redfish-exporter/LICENSE`
+
+### Migration Guide
+
+**For existing users:**
+- No configuration changes required
+- Optional: Install from RPM packages for easier distribution
+- Benefits: System package management, dependency resolution, easier updates
+
+**For new users:**
+- Install from source: `pip install -e .`
+- Install from RPM: `rpm -ivh hpe-redfish-exporter-2.3.1-1.noarch.rpm`
+- Both methods provide identical functionality
+
 ## [2.3.0] - 2026-02-26
 
 ### 🚀 Dependency Reduction: Migrated from Flask to Python http.server
