@@ -289,6 +289,13 @@ For issues or questions:
 
 ## Recent Changes
 
+### Dependency Reduction v2.3.0 (2026-02-26)
+- **Issue**: Flask web framework added unnecessary complexity and dependencies
+- **Fix**: Migrated from Flask to Python's built-in `http.server`
+- **Result**: Eliminated 5 external dependencies (Flask, Werkzeug, Jinja2, click, itsdangerous)
+- **Benefits**: Smaller footprint, reduced attack surface, simpler deployment
+- **Documentation**: Updated with migration details and benefits
+
 ### Performance Optimization v2.1.0 (2026-02-25)
 - **Issue**: Metrics collection took up to 20 seconds due to sequential API calls
 - **Fix**: Implemented parallel API fetching with caching
