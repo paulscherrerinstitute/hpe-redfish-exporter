@@ -2,7 +2,7 @@
 %define python3_version %(python3 --version | cut -f2 -d' ' | cut -f1,2 -d'.')
 
 Name: hpe-redfish-exporter
-Version: 2.3.0
+Version: 2.3.1
 Release: 1%{?dist}
 Summary: Prometheus exporter for HPE ClusterStor systems using Redfish API
 License: GPL-3.0
@@ -35,8 +35,8 @@ python3 setup.py install --root=%{buildroot} --optimize=1
 %license LICENSE
 
 %changelog
-* Thu Feb 26 2026 HPE Redfish Exporter Team - 2.3.0-1
-- Initial RPM package for HPE Redfish Exporter v2.3.0
+* Thu Feb 26 2026 HPE Redfish Exporter Team - 2.3.1-1
+- Initial RPM package for HPE Redfish Exporter v2.3.1
 - Migrated from Flask to Python http.server for reduced dependencies
 - Prometheus exporter for HPE ClusterStor systems
 - Collects metrics via HPE Redfish REST API

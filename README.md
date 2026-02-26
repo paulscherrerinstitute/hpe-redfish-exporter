@@ -104,17 +104,6 @@ hpe-redfish-exporter \
 
 The exporter will start on `http://127.0.0.1:9223/metrics`
 
-### Authentication
-
-Create `.hpe_redfish_auth` file with your credentials:
-
-```json
-{
-  "username": "your-username",
-  "password": "your-password"
-}
-```
-
 ## Metrics Collected
 
 ### Lustre Filesystem Metrics
@@ -170,6 +159,8 @@ clustorstor_node_health{health="OK"}
 
 ### Package Development
 
+#### Python Wheel package
+
 To work on the package development:
 
 ```bash
@@ -181,6 +172,22 @@ python -m pytest
 
 # Build package
 python setup.py sdist bdist_wheel
+```
+
+#### RPM package
+
+To generate a RPM package:
+
+```bash
+# ensure you have rpm tools installed and the `rpmbuild/` directory structure
+# setup correctly.
+
+# download the source
+cd ${RPMBUILD_SOURCE_DIR}
+curl -OL https://github.com/paulscherrerinstitute/hpe-redfish-exporter/archive/refs/tags/${VERSION}.tar.gz
+
+# from the project root, build RPM
+rpmbuild -bb hpe-redfish-exporter.spec
 ```
 
 ### Testing
@@ -288,6 +295,13 @@ For issues or questions:
 - Review the [HPE Redfish API documentation](docs/ClusterStor-Redfish-Swordfish-REST-API-7.2-030.pdf)
 
 ## Recent Changes
+
+### Add RPM packaging v2.3.1 (2026-02-26)
+- **Issue**: Distribute to systems that can't use `pip` or Python environments
+- **Features**:
+  - Created RPM spec which packages the HPE Redfish Exporter
+  - Created RPM spec for dependency python-redfish library (see `contrib/` directory)
+- **Documentation**: Added RPM build steps and information about the python-redfish RPM spec
 
 ### Dependency Reduction v2.3.0 (2026-02-26)
 - **Issue**: Flask web framework added unnecessary complexity and dependencies
