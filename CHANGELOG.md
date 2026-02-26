@@ -2,6 +2,76 @@
 
 All notable changes to the HPE Redfish Exporter project will be documented in this file.
 
+## [2.3.0] - 2026-02-26
+
+### 🚀 Dependency Reduction: Migrated from Flask to Python http.server
+
+### Added
+- **HTTP Server Migration**: Complete migration from Flask to Python's built-in `http.server`
+  - `http_server.py`: New HTTP server implementation with `MetricsHandler` and `HPERedfishExporterServer`
+  - Maintains identical API endpoints and functionality
+  - Eliminates Flask, Werkzeug, Jinja2, click, and itsdangerous dependencies
+
+- **Dependency Reduction**: Removed 5 external dependencies:
+  - Flask (3.1.3)
+  - Werkzeug (3.1.6)
+  - Jinja2 (3.1.6)
+  - click (8.3.1)
+  - itsdangerous (2.2.0)
+
+- **Package Size Reduction**: Smaller footprint and reduced attack surface
+- **Deployment Simplicity**: No pip installation of web framework required
+- **Performance**: Minimal overhead for simple HTTP serving
+
+### Changed
+- **Package Version**: Updated to 2.3.0 to reflect dependency reduction
+- **Core Architecture**: Replaced Flask-based server with `http.server` implementation
+- **Dependencies**: `requirements.txt` and `setup.py` updated to remove Flask dependencies
+- **Server Implementation**: `core.py` refactored to use new HTTP server
+
+### Fixed
+- **Dependency Bloat**: Eliminated unnecessary web framework dependencies
+- **Deployment Complexity**: Simplified installation and deployment process
+
+### Technical Details
+
+**Files Modified:**
+- `hpe_redfish_exporter/http_server.py`: New HTTP server implementation
+- `hpe_redfish_exporter/core.py`: Replaced Flask with http.server
+- `requirements.txt`: Removed Flask-related dependencies
+- `setup.py`: Updated install_requires to reflect new dependencies
+- `CHANGELOG.md`: Added migration details
+
+**Dependencies Removed:**
+- Flask==3.1.3
+- Werkzeug==3.1.6
+- Jinja2==3.1.6
+- click==8.3.1
+- itsdangerous==2.2.0
+
+**Dependencies Kept:**
+- redfish==3.3.4
+- requests==2.32.5
+- requests-toolbelt==1.0.0
+- requests-unixsocket==0.4.1
+- All other essential dependencies
+
+### Migration Guide
+
+**For existing users:**
+- No configuration changes required
+- No API changes (same endpoints and responses)
+- Simply reinstall the package: `pip install -e .`
+- Benefits: Smaller package, fewer dependencies, simpler deployment
+
+**Benefits:**
+- **No external web framework dependencies**
+- **Reduced package size** (removes ~2MB of Flask dependencies)
+- **Simplified deployment** (no pip installation of Flask needed)
+- **Lower resource usage** (minimal overhead for simple HTTP serving)
+- **Same functionality** (identical API endpoints and responses)
+- **Maintainable codebase** (uses built-in Python modules)
+
 ## [2.2.0] - 2026-02-25
 
 ### 🔧 Events Collection: Enhanced Error Handling and Validation
