@@ -2,6 +2,11 @@
 
 All notable changes to the HPE Redfish Exporter project will be documented in this file.
 
+## Unreleased
+
+### Added
+- **Systemd Service**: add systemd service file and configuration file
+
 ## [2.3.1] - 2026-02-26
 
 ### 🚀 RPM Package Support: Added RPM spec files for distribution

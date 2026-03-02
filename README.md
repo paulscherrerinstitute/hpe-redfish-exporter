@@ -303,28 +303,4 @@ For issues or questions:
   - Created RPM spec for dependency python-redfish library (see `contrib/` directory)
 - **Documentation**: Added RPM build steps and information about the python-redfish RPM spec
 
-### Dependency Reduction v2.3.0 (2026-02-26)
-- **Issue**: Flask web framework added unnecessary complexity and dependencies
-- **Fix**: Migrated from Flask to Python's built-in `http.server`
-- **Result**: Eliminated 5 external dependencies (Flask, Werkzeug, Jinja2, click, itsdangerous)
-- **Benefits**: Smaller footprint, reduced attack surface, simpler deployment
-- **Documentation**: Updated with migration details and benefits
-
-### Performance Optimization v2.1.0 (2026-02-25)
-- **Issue**: Metrics collection took up to 20 seconds due to sequential API calls
-- **Fix**: Implemented parallel API fetching with caching
-- **Result**: Collection time reduced from ~17s to ~1s (17x speedup)
-- **Features**:
-  - Parallel fetching with configurable concurrency (default: 20 workers)
-  - Caching for top-level API endpoints (default TTL: 30s)
-  - Optional event limit to reduce collection time
-  - New `clustorstor_fetch_errors_total` metric for monitoring API failures
-- **Documentation**: Added Performance Tuning section in README
-
-### Fixed Lustre Filesystem Statistics (2026-02-24)
-- **Issue**: Lustre metrics collection was broken due to incorrect statistics parsing
-- **Fix**: Properly handle HPE Redfish API's compound statistic keys (e.g., "OST0000 read")
-- **Result**: All Lustre filesystem metrics now correctly collected and exposed
-- **Documentation**: Added comprehensive [Lustre Metrics Documentation](docs/lustre-metrics.md)
-
 See [CHANGELOG.md](CHANGELOG.md) for complete change history.
