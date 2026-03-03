@@ -7,6 +7,10 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
 ### Added
 - **Systemd Service**: add systemd service file and configuration file
 
+### Fixed
+- **Duplicate metrics**: this was caused by an incorrect logic for how system data should be cached, we really don't need to do this
+- **Missing Linux stats**: we now also export the system load, memory usage, and cpu performance metrics
+
 ## [2.3.1] - 2026-02-26
 
 ### 🚀 RPM Package Support: Added RPM spec files for distribution

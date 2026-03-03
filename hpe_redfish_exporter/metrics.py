@@ -133,7 +133,6 @@ class MetricsCollector:
         )
         self.cache = ResponseCache(ttl=config.cache_ttl)
         self._parallel_fetcher: Optional[ParallelFetcher] = None
-        self._storage_systems_data: List[Dict] = []
 
     def collect(self) -> str:
         """Collect all metrics and return as Prometheus format"""
@@ -166,12 +165,6 @@ class MetricsCollector:
         self._collect_lustre_metrics(metrics)
         if self.debug_timing:
             print(f"[TIMING] Lustre metrics: {time.time() - start:.2f}s")
-
-        # Collect node status metrics (reuse cached data from storage systems)
-        start = time.time()
-        self._collect_node_status(metrics)
-        if self.debug_timing:
-            print(f"[TIMING] Node status: {time.time() - start:.2f}s")
 
         # Collect event service metrics
         start = time.time()
@@ -233,7 +226,7 @@ class MetricsCollector:
             node_id = data.get("Id", "unknown")
             node_name = data.get("Name", node_id)
 
-            # Health
+            # Health status (already collected, but include for completeness)
             health = data.get("Status", {}).get("Health", "Unknown")
             health_value = 1 if health.lower() == "ok" else 0
             metrics.append(
@@ -246,39 +239,38 @@ class MetricsCollector:
                 f"clustorstor_node_power_state{prom_kv({'node': node_id, 'state': power_state})} 1"
             )
 
-            # Store for reuse in _collect_node_status
-            self._storage_systems_data.append(data)
+            # Try to get Linux statistics from Oem section
+            oem_data = data.get("Oem", {})
+            linux_stats = oem_data.get("LinuxStats", {})
 
-            # Network interfaces (if present) - also fetch in parallel
-            nics_url = data.get("NetworkInterfaces", {}).get("@odata.id")
-            if nics_url:
-                nics = self.client_wrapper.safe_get(nics_url)
-                if nics and nics.status == 200:
-                    nic_urls = [
-                        nic.get("@odata.id")
-                        for nic in nics.dict.get("Members", [])
-                        if "@odata.id" in nic
-                    ]
-
-                    def process_nic(
-                        url: str, result: Any
-                    ) -> Optional[Tuple[str, Dict]]:
-                        if result and result.status == 200:
-                            return (url, result.dict)
-                        return None
-
-                    nic_results = self._parallel_fetcher.fetch(
-                        nic_urls, process_nic, "nics"
+            if linux_stats:
+                # CPU metrics
+                cpu_util = linux_stats.get("CPUUtilization")
+                if cpu_util is not None:
+                    metrics.append(
+                        f"clustorstor_node_cpu_utilization{prom_kv({'node': node_id})} {cpu_util}"
                     )
 
-                    for nic_url, nic_data in nic_results:
-                        nic_id = nic_data.get("Id", "nic")
-                        link_status = nic_data.get("Status", {}).get(
-                            "Health", "Unknown"
-                        )
-                        link_val = 1 if link_status.lower() == "ok" else 0
+                # Memory metrics
+                for mem_metric in [
+                    "MemoryUtilization",
+                    "AvailableMemory",
+                    "TotalMemory",
+                ]:
+                    if mem_metric in linux_stats:
                         metrics.append(
-                            f"clustorstor_node_nic_health{prom_kv({'node': node_id, 'nic': nic_id, 'health': link_status})} {link_val}"
+                            f"clustorstor_node_{mem_metric.lower()}{prom_kv({'node': node_id})} {linux_stats[mem_metric]}"
+                        )
+
+                # Load averages
+                for load_metric in [
+                    "LoadAverage1m",
+                    "LoadAverage5m",
+                    "LoadAverage15m",
+                ]:
+                    if load_metric in linux_stats:
+                        metrics.append(
+                            f"clustorstor_node_{load_metric.lower()}{prom_kv({'node': node_id})} {linux_stats[load_metric]}"
                         )
 
     def _collect_lustre_metrics(self, metrics: List[str]):
@@ -399,60 +391,6 @@ class MetricsCollector:
                     except (ValueError, IndexError):
                         # Skip malformed or non-numeric statistics
                         continue
-
-    def _collect_node_status(self, metrics: List[str]):
-        """Collect node status and system load metrics"""
-        # Reuse data from _collect_storage_systems instead of making redundant API calls
-        for data in self._storage_systems_data:
-            node_id = data.get("Id", "unknown")
-            node_name = data.get("Name", node_id)
-
-            # Health status (already collected, but include for completeness)
-            health = data.get("Status", {}).get("Health", "Unknown")
-            health_value = 1 if health.lower() == "ok" else 0
-            metrics.append(
-                f"clustorstor_node_health{prom_kv({'node': node_id, 'health': health})} {health_value}"
-            )
-
-            # Power state
-            power_state = data.get("PowerState", "Unknown")
-            metrics.append(
-                f"clustorstor_node_power_state{prom_kv({'node': node_id, 'state': power_state})} 1"
-            )
-
-            # Try to get Linux statistics from Oem section
-            oem_data = data.get("Oem", {}).get("Hpe", {})
-            linux_stats = oem_data.get("LinuxStats", {})
-
-            if linux_stats:
-                # CPU metrics
-                cpu_util = linux_stats.get("CPUUtilization")
-                if cpu_util is not None:
-                    metrics.append(
-                        f"clustorstor_node_cpu_utilization{prom_kv({'node': node_id})} {cpu_util}"
-                    )
-
-                # Memory metrics
-                for mem_metric in [
-                    "MemoryUtilization",
-                    "AvailableMemory",
-                    "TotalMemory",
-                ]:
-                    if mem_metric in linux_stats:
-                        metrics.append(
-                            f"clustorstor_node_{mem_metric.lower()}{prom_kv({'node': node_id})} {linux_stats[mem_metric]}"
-                        )
-
-                # Load averages
-                for load_metric in [
-                    "LoadAverage1m",
-                    "LoadAverage5m",
-                    "LoadAverage15m",
-                ]:
-                    if load_metric in linux_stats:
-                        metrics.append(
-                            f"clustorstor_node_{load_metric.lower()}{prom_kv({'node': node_id})} {linux_stats[load_metric]}"
-                        )
 
     def _collect_events(self, metrics: List[str]):
         """Collect event service history metrics"""
