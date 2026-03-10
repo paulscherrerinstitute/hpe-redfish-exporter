@@ -133,17 +133,53 @@ class MetricsCollector:
         )
         self.cache = ResponseCache(ttl=config.cache_ttl)
         self._parallel_fetcher: Optional[ParallelFetcher] = None
+        self._metrics: List[str] = []
+        self._unique_metric: set[str] = set()
+        self._unique_metric_help: set[str] = set()
+
+    def _add_metric(
+        self,
+        metric: str,
+        value: str,
+        metric_type: str = None,
+        help_text: str = None
+    ):
+        """Append metrics information for later emitting"""
+        if metric in self._unique_metric:
+            raise Exception(f"Repeat of metric name: {metric}!")
+
+        # capture the name of the metric
+        name = metric.split('{', maxsplit=1)[0]
+
+        if name not in self._unique_metric_help:
+            if help_text:
+                self._metrics.append(f"# HELP {name} {help_text}")
+            if metric_type:
+                self._metrics.append(f"# TYPE {name} {metric_type}")
+            self._unique_metric_help.add(name)
+        self._metrics.append(f"{metric} {value}")
+
+        self._unique_metric.add(metric)
 
     def collect(self) -> str:
         """Collect all metrics and return as Prometheus format"""
-        metrics = []
+        # reset lists and sets
+        del self._metrics[:]
+        self._unique_metric.clear()
+        self._unique_metric_help.clear()
+
         now = int(time.time())
 
         # Connect to Redfish API
         if not self.client_wrapper.connect():
-            return "redfish_up 0\n"
+            self._add_metric(
+                "redfish_up", "0", "gauge", "Whether the Redfish API is reachable"
+            )
+            return "\n".join(self._metrics)
 
-        metrics.append("redfish_up 1")
+        self._add_metric(
+            "redfish_up", "1", "gauge", "Whether the Redfish API is reachable"
+        )
 
         start_total = time.time()
 
@@ -156,26 +192,28 @@ class MetricsCollector:
 
         # Collect storage system metrics
         start = time.time()
-        self._collect_storage_systems(metrics)
+        self._collect_storage_systems()
         if self.debug_timing:
             print(f"[TIMING] Storage systems: {time.time() - start:.2f}s")
 
         # Collect Lustre filesystem metrics
         start = time.time()
-        self._collect_lustre_metrics(metrics)
+        self._collect_lustre_metrics()
         if self.debug_timing:
             print(f"[TIMING] Lustre metrics: {time.time() - start:.2f}s")
 
         # Collect event service metrics
         start = time.time()
-        self._collect_events(metrics)
+        self._collect_events()
         if self.debug_timing:
             print(f"[TIMING] Events: {time.time() - start:.2f}s")
 
         # Add fetch error metric
         total_errors = self._parallel_fetcher.get_error_count()
         if total_errors > 0:
-            metrics.append(f"clustorstor_fetch_errors_total {total_errors}")
+            self._add_metric(
+                "clustorstor_fetch_errors_total", total_errors, "counter", "Total failed API fetches"
+            )
 
         if self.debug_timing:
             print(f"[TIMING] Total collection: {time.time() - start:.2f}s")
@@ -183,7 +221,7 @@ class MetricsCollector:
         # Logout
         self.client_wrapper.logout()
 
-        return "\n".join(metrics)
+        return "\n".join(self._metrics)
 
     def _get_cached(self, url: str) -> Optional[Any]:
         """Get from cache or fetch from API"""
@@ -195,17 +233,32 @@ class MetricsCollector:
             self.cache.set(url, result)
         return result
 
-    def _collect_storage_systems(self, metrics: List[str]):
+    def _collect_storage_systems(self):
         """Collect storage system metrics"""
         ss = self._get_cached("/redfish/v1/StorageSystems")
         if ss is None or ss.status != 200:
-            metrics.append("clustorstor_storage_systems_up 0")
+            self._add_metric(
+                "clustorstor_storage_systems_up",
+                "0",
+                "gauge",
+                "Storage systems availability",
+            )
             return
 
-        metrics.append("clustorstor_storage_systems_up 1")
+        self._add_metric(
+            "clustorstor_storage_systems_up",
+            "1",
+            "gauge",
+            "Storage systems availability"
+        )
 
         members = ss.dict.get("Members", [])
-        metrics.append(f"clustorstor_nodes_count {len(members)}")
+        self._add_metric(
+            "clustorstor_nodes_total",
+            len(members),
+            "counter",
+            "Number of storage nodes"
+        )
 
         # Get all node URLs
         node_urls = [node.get("@odata.id") for node in members if "@odata.id" in node]
@@ -229,14 +282,20 @@ class MetricsCollector:
             # Health status (already collected, but include for completeness)
             health = data.get("Status", {}).get("Health", "Unknown")
             health_value = 1 if health.lower() == "ok" else 0
-            metrics.append(
-                f"clustorstor_node_health{prom_kv({'node': node_id, 'health': health})} {health_value}"
+            self._add_metric(
+                f"clustorstor_node_health{prom_kv({'node': node_id, 'health': health})}",
+                health_value,
+                "gauge",
+                "Node health status (1=OK, 0=other)"
             )
 
             # Power state
             power_state = data.get("PowerState", "Unknown")
-            metrics.append(
-                f"clustorstor_node_power_state{prom_kv({'node': node_id, 'state': power_state})} 1"
+            self._add_metric(
+                f"clustorstor_node_power_state{prom_kv({'node': node_id, 'state': power_state})}",
+                1,
+                "gauge",
+                "Node power state"
             )
 
             # Try to get Linux statistics from Oem section
@@ -248,7 +307,7 @@ class MetricsCollector:
                     _tmp_value = value.replace(" (%)", "")
                 elif "(GB)" in value:
                     value_format = value.replace(" (GB)", "")
-                    _tmp_value = str(float(value_format) * (2**10)**3) # into bytes
+                    _tmp_value = str(float(value_format) * (2**10) ** 3)  # into bytes
                 elif "(m)" in value:
                     _tmp_value = value.replace(" (m)", "")
                 else:
@@ -260,23 +319,32 @@ class MetricsCollector:
                 # CPU metrics
                 cpu_util = linux_stats.get("CPUUtilization")
                 if cpu_util is not None:
-                    metrics.append(
-                        f"clustorstor_node_cpu_utilization_percent{prom_kv({'node': node_id})} {sanitize(cpu_util)}"
+                    self._add_metric(
+                        f"clustorstor_node_cpu_utilization_percent{prom_kv({'node': node_id})}",
+                        sanitize(cpu_util),
+                        "gauge",
+                        "CPU utilization percentage"
                     )
 
                 # Memory metrics
                 if "MemoryUtilization" in linux_stats:
-                    metrics.append(
-                        f"clustorstor_node_memoryutilization_percent{prom_kv({'node': node_id})} {sanitize(linux_stats["MemoryUtilization"])}"
+                    self._add_metric(
+                        f"clustorstor_node_memoryutilization_percent{prom_kv({'node': node_id})}",
+                        sanitize(linux_stats['MemoryUtilization']),
+                        "gauge",
+                        "Memory utilization percentage"
                     )
 
                 for mem_metric in [
-                    "AvailableMemory",
-                    "TotalMemory",
+                    ("AvailableMemory", "gauge", "Available memory in bytes"),
+                    ("TotalMemory", "gauge", "Total memory in bytes")
                 ]:
-                    if mem_metric in linux_stats:
-                        metrics.append(
-                            f"clustorstor_node_{mem_metric.lower()}_bytes{prom_kv({'node': node_id})} {sanitize(linux_stats[mem_metric])}"
+                    if mem_metric[0] in linux_stats:
+                        self._add_metric(
+                            f"clustorstor_node_{mem_metric[0].lower()}_bytes{prom_kv({'node': node_id})}",
+                            sanitize(linux_stats[mem_metric[0]]),
+                            mem_metric[1],
+                            mem_metric[2]
                         )
 
                 # Load averages
@@ -286,11 +354,14 @@ class MetricsCollector:
                     "LoadAverage15m",
                 ]:
                     if load_metric in linux_stats:
-                        metrics.append(
-                            f"clustorstor_node_{load_metric.lower()}{prom_kv({'node': node_id})} {sanitize(linux_stats[load_metric])}"
+                        self._add_metric(
+                            f"clustorstor_node_{load_metric.lower()}{prom_kv({'node': node_id})}",
+                            sanitize(linux_stats[load_metric]),
+                            "gauge",
+                            "System load averages"
                         )
 
-    def _collect_lustre_metrics(self, metrics: List[str]):
+    def _collect_lustre_metrics(self):
         """Collect Lustre filesystem metrics"""
         storage_root = self._get_cached("/redfish/v1/StorageServices")
         if storage_root is None or storage_root.status != 200:
@@ -330,12 +401,16 @@ class MetricsCollector:
         )
 
         # Process filesystem results
+        unique_fs_members: set[str] = set()
         for fs_data in fs_results:
             data = fs_data["data"]
             fs_member_id = data.get("Id")
 
             if "FSYS" in fs_member_id:
                 # shared storage for management nodes
+                continue
+            elif fs_member_id in unique_fs_members:
+                # skip as we have already seen this OST/MDT
                 continue
 
             # Get lustre MDT/OST metrics
@@ -370,14 +445,20 @@ class MetricsCollector:
                                 "metric": clean_metric_name_result,
                             }
 
-                            metrics.append(
-                                f"clustorstor_lustre_metric{prom_kv(labels)} {numeric_value}"
+                            self._add_metric(
+                                f"clustorstor_lustre_metric{prom_kv(labels)}",
+                                numeric_value,
+                                "gauge",
+                                "Generic Lustre metric with all labels"
                             )
 
                             # Also create specific metrics for common operations
                             if clean_metric_name_result in ["read", "write"]:
-                                metrics.append(
-                                    f"clustorstor_lustre_{clean_metric_name_result}_ops{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})} {numeric_value}"
+                                self._add_metric(
+                                    f"clustorstor_lustre_{clean_metric_name_result}_ops_total{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    numeric_value,
+                                    "counter",
+                                    f"Cumulative {clean_metric_name_result} operations"
                                 )
                             elif clean_metric_name_result in [
                                 "free_space",
@@ -385,31 +466,46 @@ class MetricsCollector:
                                 "used_space",
                                 "available_space",
                             ]:
-                                metrics.append(
-                                    f"clustorstor_lustre_{clean_metric_name_result}_bytes{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})} {numeric_value}"
+                                self._add_metric(
+                                    f"clustorstor_lustre_{clean_metric_name_result}_bytes{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    numeric_value,
+                                    "gauge",
+                                    f"{clean_metric_name_result.capitalize().replace("_", " ")} in bytes"
                                 )
                             elif clean_metric_name_result in [
                                 "free_inodes",
                                 "total_inodes",
                                 "used_inodes",
                             ]:
-                                metrics.append(
-                                    f"clustorstor_lustre_{clean_metric_name_result}{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})} {numeric_value}"
+                                self._add_metric(
+                                    f"clustorstor_lustre_{clean_metric_name_result}{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    numeric_value,
+                                    "gauge",
+                                    f"{clean_metric_name_result.capitalize().replace("_", " ")} count"
                                 )
                             elif clean_metric_name_result == "num_exports":
-                                metrics.append(
-                                    f"clustorstor_lustre_exports{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})} {numeric_value}"
+                                self._add_metric(
+                                    f"clustorstor_lustre_exports{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    numeric_value,
+                                    "gauge",
+                                    "Number of exports"
                                 )
                             elif clean_metric_name_result == "percent_free_space":
-                                metrics.append(
-                                    f"clustorstor_lustre_free_space_percent{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})} {numeric_value}"
+                                self._add_metric(
+                                    f"clustorstor_lustre_free_space_percent{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    numeric_value,
+                                    "gauge",
+                                    "Free space percentage"
                                 )
 
                     except (ValueError, IndexError):
                         # Skip malformed or non-numeric statistics
+                        # TODO we should log this
                         continue
 
-    def _collect_events(self, metrics: List[str]):
+                unique_fs_members.add(fs_member_id)
+
+    def _collect_events(self):
         """Collect event service history metrics"""
         events = self._get_cached("/redfish/v1/Events")
         if events is None or events.status != 200:
@@ -421,7 +517,12 @@ class MetricsCollector:
         if self.config.events_limit and len(event_members) > self.config.events_limit:
             event_members = event_members[-self.config.events_limit :]
 
-        metrics.append(f"clustorstor_events_total {len(event_members)}")
+        self._add_metric(
+            "clustorstor_events_total",
+            len(event_members),
+            "counter",
+            "Total number of events"
+        )
 
         # Get all event URLs
         event_urls = [e.get("@odata.id") for e in event_members if "@odata.id" in e]
@@ -455,6 +556,9 @@ class MetricsCollector:
                 sev_count[severity] = sev_count.get(severity, 0) + 1
 
         for severity, val in sev_count.items():
-            metrics.append(
-                f"clustorstor_events_severity{prom_kv({'severity': severity})} {val}"
+            self._add_metric(
+                f"clustorstor_events_severity{prom_kv({'severity': severity})}",
+                val,
+                "gauge",
+                "Events count by severity"
             )
