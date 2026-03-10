@@ -233,7 +233,7 @@ class MetricsCollector:
                 f"clustorstor_node_health{prom_kv({'node': node_id, 'health': health})} {health_value}"
             )
 
-            # Power state if present
+            # Power state
             power_state = data.get("PowerState", "Unknown")
             metrics.append(
                 f"clustorstor_node_power_state{prom_kv({'node': node_id, 'state': power_state})} 1"
@@ -243,23 +243,40 @@ class MetricsCollector:
             oem_data = data.get("Oem", {})
             linux_stats = oem_data.get("LinuxStats", {})
 
+            def sanitize(value: str) -> str:
+                if "(%)" in value:
+                    _tmp_value = value.replace(" (%)", "")
+                elif "(GB)" in value:
+                    value_format = value.replace(" (GB)", "")
+                    _tmp_value = str(float(value_format) * (2**10)**3) # into bytes
+                elif "(m)" in value:
+                    _tmp_value = value.replace(" (m)", "")
+                else:
+                    _tmp_value = value
+
+                return _tmp_value
+
             if linux_stats:
                 # CPU metrics
                 cpu_util = linux_stats.get("CPUUtilization")
                 if cpu_util is not None:
                     metrics.append(
-                        f"clustorstor_node_cpu_utilization{prom_kv({'node': node_id})} {cpu_util}"
+                        f"clustorstor_node_cpu_utilization_percent{prom_kv({'node': node_id})} {sanitize(cpu_util)}"
                     )
 
                 # Memory metrics
+                if "MemoryUtilization" in linux_stats:
+                    metrics.append(
+                        f"clustorstor_node_memoryutilization_percent{prom_kv({'node': node_id})} {sanitize(linux_stats["MemoryUtilization"])}"
+                    )
+
                 for mem_metric in [
-                    "MemoryUtilization",
                     "AvailableMemory",
                     "TotalMemory",
                 ]:
                     if mem_metric in linux_stats:
                         metrics.append(
-                            f"clustorstor_node_{mem_metric.lower()}{prom_kv({'node': node_id})} {linux_stats[mem_metric]}"
+                            f"clustorstor_node_{mem_metric.lower()}_bytes{prom_kv({'node': node_id})} {sanitize(linux_stats[mem_metric])}"
                         )
 
                 # Load averages
@@ -270,7 +287,7 @@ class MetricsCollector:
                 ]:
                     if load_metric in linux_stats:
                         metrics.append(
-                            f"clustorstor_node_{load_metric.lower()}{prom_kv({'node': node_id})} {linux_stats[load_metric]}"
+                            f"clustorstor_node_{load_metric.lower()}{prom_kv({'node': node_id})} {sanitize(linux_stats[load_metric])}"
                         )
 
     def _collect_lustre_metrics(self, metrics: List[str]):
