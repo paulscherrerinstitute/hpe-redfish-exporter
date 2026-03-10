@@ -4,8 +4,19 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
 
 ## Unreleased
 
+## [2.4.0] - 2026-03-10
+
 ### Added
 - **Systemd Service**: add systemd service file and configuration file
+- **Prometheus HELP and TYPE text**: this will help upstream scrapers understand the metrics
+
+### Changed
+- **Metrics labels**: used the in-browser linter <https://o11y.tools/metricslint/> to improve the labeling of metrics to better
+  fit with the [Prometheus label naming policies](https://prometheus.io/docs/practices/naming/).
+
+### Fixed
+- **Duplicate metrics**: this was caused by an incorrect logic for how system data should be cached, we really don't need to do this
+- **Missing Linux stats**: we now also export the system load, memory usage, and cpu performance metrics
 
 ## [2.3.1] - 2026-02-26
 
