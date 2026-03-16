@@ -4,6 +4,14 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
 
 ## Unreleased
 
+## [2.5.0] - 2026-03-16
+
+### Changed
+- **Harmize metric names**: ensure that all metrics start with prefix `hpe_redfish_*`
+
+### Fixed
+- **Misspelling of ClusterStor**: had in various places "clustorstor" when it should be "clusterstor"
+
 ## [2.4.0] - 2026-03-10
 
 ### Added

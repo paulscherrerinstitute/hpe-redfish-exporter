@@ -57,7 +57,7 @@ The exporter generates two types of Prometheus metrics for each statistic:
 All statistics are exposed as generic metrics with a `metric` label:
 
 ```prometheus
-clustorstor_lustre_metric{
+hpe_redfish_clusterstor_lustre_metric{
   filesystem="psistor",
   target="psistor-OST0000", 
   type="OST",
@@ -71,13 +71,13 @@ Common operations get dedicated metric names for easier querying:
 
 #### I/O Operations
 ```prometheus
-clustorstor_lustre_read_ops{
+hpe_redfish_clusterstor_lustre_read_ops{
   filesystem="psistor",
   target="psistor-OST0000",
   type="OST"
 } 0.0
 
-clustorstor_lustre_write_ops{
+hpe_redfish_clusterstor_lustre_write_ops{
   filesystem="psistor",
   target="psistor-OST0000", 
   type="OST"
@@ -86,25 +86,25 @@ clustorstor_lustre_write_ops{
 
 #### Storage Capacity (bytes)
 ```prometheus
-clustorstor_lustre_free_space_bytes{
+hpe_redfish_clusterstor_lustre_free_space_bytes{
   filesystem="psistor",
   target="psistor-OST0000",
   type="OST"
 } 34440171204608.0
 
-clustorstor_lustre_total_space_bytes{
+hpe_redfish_clusterstor_lustre_total_space_bytes{
   filesystem="psistor",
   target="psistor-OST0000",
   type="OST"
 } 41666114793472.0
 
-clustorstor_lustre_used_space_bytes{
+hpe_redfish_clusterstor_lustre_used_space_bytes{
   filesystem="psistor",
   target="psistor-OST0000",
   type="OST"
 } 7225943588864.0
 
-clustorstor_lustre_available_space_bytes{
+hpe_redfish_clusterstor_lustre_available_space_bytes{
   filesystem="psistor",
   target="psistor-OST0000",
   type="OST"
@@ -113,19 +113,19 @@ clustorstor_lustre_available_space_bytes{
 
 #### Inode Usage
 ```prometheus
-clustorstor_lustre_free_inodes{
+hpe_redfish_clusterstor_lustre_free_inodes{
   filesystem="psistor",
   target="psistor-OST0000",
   type="OST"
 } 20460794.0
 
-clustorstor_lustre_total_inodes{
+hpe_redfish_clusterstor_lustre_total_inodes{
   filesystem="psistor",
   target="psistor-OST0000",
   type="OST"
 } 40072320.0
 
-clustorstor_lustre_used_inodes{
+hpe_redfish_clusterstor_lustre_used_inodes{
   filesystem="psistor",
   target="psistor-OST0000",
   type="OST"
@@ -134,13 +134,13 @@ clustorstor_lustre_used_inodes{
 
 #### Additional Metrics
 ```prometheus
-clustorstor_lustre_exports{
+hpe_redfish_clusterstor_lustre_exports{
   filesystem="psistor",
   target="psistor-OST0000",
   type="OST"
 } 101.0
 
-clustorstor_lustre_free_space_percent{
+hpe_redfish_clusterstor_lustre_free_space_percent{
   filesystem="psistor",
   target="psistor-OST0000",
   type="OST"
@@ -159,34 +159,34 @@ All Lustre metrics include the following labels:
 
 ### Monitor read/write operations per OST
 ```prometheus
-sum by(target) (rate(clustorstor_lustre_read_ops[5m]))
-sum by(target) (rate(clustorstor_lustre_write_ops[5m]))
+sum by(target) (rate(hpe_redfish_clusterstor_lustre_read_ops[5m]))
+sum by(target) (rate(hpe_redfish_clusterstor_lustre_write_ops[5m]))
 ```
 
 ### Check filesystem capacity usage
 ```prometheus
 100 * (
-  sum(clustorstor_lustre_used_space_bytes) by (filesystem)
+  sum(hpe_redfish_clusterstor_lustre_used_space_bytes) by (filesystem)
   / 
-  sum(clustorstor_lustre_total_space_bytes) by (filesystem)
+  sum(hpe_redfish_clusterstor_lustre_total_space_bytes) by (filesystem)
 )
 ```
 
 ### Monitor inode usage
 ```prometheus
 100 * (
-  sum(clustorstor_lustre_used_inodes) by (filesystem)
+  sum(hpe_redfish_clusterstor_lustre_used_inodes) by (filesystem)
   / 
-  sum(clustorstor_lustre_total_inodes) by (filesystem)
+  sum(hpe_redfish_clusterstor_lustre_total_inodes) by (filesystem)
 )
 ```
 
 ### Alert on high capacity usage
 ```prometheus
 100 * (
-  sum(clustorstor_lustre_used_space_bytes) by (filesystem)
+  sum(hpe_redfish_clusterstor_lustre_used_space_bytes) by (filesystem)
   / 
-  sum(clustorstor_lustre_total_space_bytes) by (filesystem)
+  sum(hpe_redfish_clusterstor_lustre_total_space_bytes) by (filesystem)
 ) > 90
 ```
 
