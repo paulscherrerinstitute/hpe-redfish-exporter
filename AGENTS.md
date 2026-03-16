@@ -132,9 +132,9 @@ curl http://localhost:9223/metrics
 ```
 
 ### Key Metrics
-- **Lustre**: `clustorstor_lustre_*` (read_ops, write_ops, space_bytes, inodes)
-- **System**: `clustorstor_node_*` (health, power_state, cpu_utilization)
-- **Events**: `clustorstor_events_*` (total, severity)
+- **Lustre**: `hpe_redfish_clustorstor_lustre_*` (read_ops, write_ops, space_bytes, inodes)
+- **System**: `hpe_redfish_clustorstor_node_*` (health, power_state, cpu_utilization)
+- **Events**: `hpe_redfish_clustorstor_events_*` (total, severity)
 
 ## Decision Making
 

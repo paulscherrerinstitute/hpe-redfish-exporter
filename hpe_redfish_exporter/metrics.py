@@ -173,12 +173,12 @@ class MetricsCollector:
         # Connect to Redfish API
         if not self.client_wrapper.connect():
             self._add_metric(
-                "redfish_up", "0", "gauge", "Whether the Redfish API is reachable"
+                "hpe_redfish_up", "0", "gauge", "Whether the Redfish API is reachable"
             )
             return "\n".join(self._metrics)
 
         self._add_metric(
-            "redfish_up", "1", "gauge", "Whether the Redfish API is reachable"
+            "hpe_redfish_up", "1", "gauge", "Whether the Redfish API is reachable"
         )
 
         start_total = time.time()
@@ -212,7 +212,7 @@ class MetricsCollector:
         total_errors = self._parallel_fetcher.get_error_count()
         if total_errors > 0:
             self._add_metric(
-                "clustorstor_fetch_errors_total", total_errors, "counter", "Total failed API fetches"
+                "hpe_redfish_clustorstor_fetch_errors_total", total_errors, "counter", "Total failed API fetches"
             )
 
         if self.debug_timing:
@@ -238,7 +238,7 @@ class MetricsCollector:
         ss = self._get_cached("/redfish/v1/StorageSystems")
         if ss is None or ss.status != 200:
             self._add_metric(
-                "clustorstor_storage_systems_up",
+                "hpe_redfish_clustorstor_storage_systems_up",
                 "0",
                 "gauge",
                 "Storage systems availability",
@@ -246,7 +246,7 @@ class MetricsCollector:
             return
 
         self._add_metric(
-            "clustorstor_storage_systems_up",
+            "hpe_redfish_clustorstor_storage_systems_up",
             "1",
             "gauge",
             "Storage systems availability"
@@ -254,7 +254,7 @@ class MetricsCollector:
 
         members = ss.dict.get("Members", [])
         self._add_metric(
-            "clustorstor_nodes_total",
+            "hpe_redfish_clustorstor_nodes_total",
             len(members),
             "counter",
             "Number of storage nodes"
@@ -283,7 +283,7 @@ class MetricsCollector:
             health = data.get("Status", {}).get("Health", "Unknown")
             health_value = 1 if health.lower() == "ok" else 0
             self._add_metric(
-                f"clustorstor_node_health{prom_kv({'node': node_id, 'health': health})}",
+                f"hpe_redfish_clustorstor_node_health{prom_kv({'node': node_id, 'health': health})}",
                 health_value,
                 "gauge",
                 "Node health status (1=OK, 0=other)"
@@ -292,7 +292,7 @@ class MetricsCollector:
             # Power state
             power_state = data.get("PowerState", "Unknown")
             self._add_metric(
-                f"clustorstor_node_power_state{prom_kv({'node': node_id, 'state': power_state})}",
+                f"hpe_redfish_clustorstor_node_power_state{prom_kv({'node': node_id, 'state': power_state})}",
                 1,
                 "gauge",
                 "Node power state"
@@ -320,7 +320,7 @@ class MetricsCollector:
                 cpu_util = linux_stats.get("CPUUtilization")
                 if cpu_util is not None:
                     self._add_metric(
-                        f"clustorstor_node_cpu_utilization_percent{prom_kv({'node': node_id})}",
+                        f"hpe_redfish_clustorstor_node_cpu_utilization_percent{prom_kv({'node': node_id})}",
                         sanitize(cpu_util),
                         "gauge",
                         "CPU utilization percentage"
@@ -329,7 +329,7 @@ class MetricsCollector:
                 # Memory metrics
                 if "MemoryUtilization" in linux_stats:
                     self._add_metric(
-                        f"clustorstor_node_memoryutilization_percent{prom_kv({'node': node_id})}",
+                        f"hpe_redfish_clustorstor_node_memoryutilization_percent{prom_kv({'node': node_id})}",
                         sanitize(linux_stats['MemoryUtilization']),
                         "gauge",
                         "Memory utilization percentage"
@@ -341,7 +341,7 @@ class MetricsCollector:
                 ]:
                     if mem_metric[0] in linux_stats:
                         self._add_metric(
-                            f"clustorstor_node_{mem_metric[0].lower()}_bytes{prom_kv({'node': node_id})}",
+                            f"hpe_redfish_clustorstor_node_{mem_metric[0].lower()}_bytes{prom_kv({'node': node_id})}",
                             sanitize(linux_stats[mem_metric[0]]),
                             mem_metric[1],
                             mem_metric[2]
@@ -355,7 +355,7 @@ class MetricsCollector:
                 ]:
                     if load_metric in linux_stats:
                         self._add_metric(
-                            f"clustorstor_node_{load_metric.lower()}{prom_kv({'node': node_id})}",
+                            f"hpe_redfish_clustorstor_node_{load_metric.lower()}{prom_kv({'node': node_id})}",
                             sanitize(linux_stats[load_metric]),
                             "gauge",
                             "System load averages"
@@ -446,7 +446,7 @@ class MetricsCollector:
                             }
 
                             self._add_metric(
-                                f"clustorstor_lustre_metric{prom_kv(labels)}",
+                                f"hpe_redfish_clustorstor_lustre_metric{prom_kv(labels)}",
                                 numeric_value,
                                 "gauge",
                                 "Generic Lustre metric with all labels"
@@ -455,7 +455,7 @@ class MetricsCollector:
                             # Also create specific metrics for common operations
                             if clean_metric_name_result in ["read", "write"]:
                                 self._add_metric(
-                                    f"clustorstor_lustre_{clean_metric_name_result}_ops_total{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clustorstor_lustre_{clean_metric_name_result}_ops_total{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
                                     numeric_value,
                                     "counter",
                                     f"Cumulative {clean_metric_name_result} operations"
@@ -467,7 +467,7 @@ class MetricsCollector:
                                 "available_space",
                             ]:
                                 self._add_metric(
-                                    f"clustorstor_lustre_{clean_metric_name_result}_bytes{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clustorstor_lustre_{clean_metric_name_result}_bytes{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
                                     numeric_value,
                                     "gauge",
                                     f"{clean_metric_name_result.capitalize().replace("_", " ")} in bytes"
@@ -478,21 +478,21 @@ class MetricsCollector:
                                 "used_inodes",
                             ]:
                                 self._add_metric(
-                                    f"clustorstor_lustre_{clean_metric_name_result}{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clustorstor_lustre_{clean_metric_name_result}{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
                                     numeric_value,
                                     "gauge",
                                     f"{clean_metric_name_result.capitalize().replace("_", " ")} count"
                                 )
                             elif clean_metric_name_result == "num_exports":
                                 self._add_metric(
-                                    f"clustorstor_lustre_exports{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clustorstor_lustre_exports{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
                                     numeric_value,
                                     "gauge",
                                     "Number of exports"
                                 )
                             elif clean_metric_name_result == "percent_free_space":
                                 self._add_metric(
-                                    f"clustorstor_lustre_free_space_percent{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clustorstor_lustre_free_space_percent{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
                                     numeric_value,
                                     "gauge",
                                     "Free space percentage"
@@ -518,7 +518,7 @@ class MetricsCollector:
             event_members = event_members[-self.config.events_limit :]
 
         self._add_metric(
-            "clustorstor_events_total",
+            "hpe_redfish_clustorstor_events_total",
             len(event_members),
             "counter",
             "Total number of events"
@@ -557,7 +557,7 @@ class MetricsCollector:
 
         for severity, val in sev_count.items():
             self._add_metric(
-                f"clustorstor_events_severity{prom_kv({'severity': severity})}",
+                f"hpe_redfish_clustorstor_events_severity{prom_kv({'severity': severity})}",
                 val,
                 "gauge",
                 "Events count by severity"
