@@ -52,7 +52,7 @@ setup(
         "exporter",
         "redfish",
         "hpe",
-        "clustorstor",
+        "clusterstor",
         "lustre",
         "monitoring",
     ],

@@ -211,14 +211,14 @@ The implementation uses a defensive programming approach:
 
 ### Event Count Metrics
 ```prometheus
-hpe_redfish_clustorstor_events_total{limit="all"} 747
+hpe_redfish_clusterstor_events_total{limit="all"} 747
 ```
 
 ### Severity Distribution Metrics
 ```prometheus
-hpe_redfish_clustorstor_events_severity{severity="OK"} 120
-hpe_redfish_clustorstor_events_severity{severity="Warning"} 45
-hpe_redfish_clustorstor_events_severity{severity="Critical"} 3
+hpe_redfish_clusterstor_events_severity{severity="OK"} 120
+hpe_redfish_clusterstor_events_severity{severity="Warning"} 45
+hpe_redfish_clusterstor_events_severity{severity="Critical"} 3
 ```
 
 ## Best Practices

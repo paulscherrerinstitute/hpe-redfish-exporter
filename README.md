@@ -92,7 +92,7 @@ python hpe-redfish-exporter-wrapper.py
 #### With custom configuration:
 ```bash
 hpe-redfish-exporter \
-  --redfish-host "https://your-clustorstor:8081" \
+  --redfish-host "https://your-clusterstor:8081" \
   --listen-addr "0.0.0.0" \
   --listen-port 9223 \
   --auth-file "/path/to/auth.json" \
@@ -110,42 +110,42 @@ The exporter will start on `http://127.0.0.1:9223/metrics`
 See [Lustre Metrics Documentation](docs/lustre-metrics.md) for detailed information.
 
 **Key metrics:**
-- `clustorstor_lustre_read_ops` / `clustorstor_lustre_write_ops` - IO operations
-- `clustorstor_lustre_free_space_bytes` / `clustorstor_lustre_used_space_bytes` - Capacity
-- `clustorstor_lustre_free_inodes` / `clustorstor_lustre_used_inodes` - Inode usage
-- `clustorstor_lustre_exports` - Export counts
-- `clustorstor_lustre_free_space_percent` - Capacity percentage
+- `clusterstor_lustre_read_ops` / `clustorstor_lustre_write_ops` - IO operations
+- `clusterstor_lustre_free_space_bytes` / `clustorstor_lustre_used_space_bytes` - Capacity
+- `clusterstor_lustre_free_inodes` / `clustorstor_lustre_used_inodes` - Inode usage
+- `clusterstor_lustre_exports` - Export counts
+- `clusterstor_lustre_free_space_percent` - Capacity percentage
 
 ### System Metrics
-- `clustorstor_node_health` - Node health status
-- `clustorstor_node_power_state` - Node power state
-- `clustorstor_node_cpu_utilization` - CPU usage
-- `clustorstor_node_memory_utilization` - Memory usage
-- `clustorstor_node_load_average1m` / `load_average5m` / `load_average15m` - System load
-- `clustorstor_events_total` - Total event count
-- `clustorstor_events_severity` - Events by severity level
-- `clustorstor_fetch_errors_total` - Total number of failed API fetches
+- `clusterstor_node_health` - Node health status
+- `clusterstor_node_power_state` - Node power state
+- `clusterstor_node_cpu_utilization` - CPU usage
+- `clusterstor_node_memory_utilization` - Memory usage
+- `clusterstor_node_load_average1m` / `load_average5m` / `load_average15m` - System load
+- `clusterstor_events_total` - Total event count
+- `clusterstor_events_severity` - Events by severity level
+- `clusterstor_fetch_errors_total` - Total number of failed API fetches
 
 ## Example Queries
 
 ### Lustre Filesystem Capacity Usage
 ```prometheus
 100 * (
-  sum(clustorstor_lustre_used_space_bytes) by (filesystem)
+  sum(clusterstor_lustre_used_space_bytes) by (filesystem)
   / 
-  sum(clustorstor_lustre_total_space_bytes) by (filesystem)
+  sum(clusterstor_lustre_total_space_bytes) by (filesystem)
 )
 ```
 
 ### Lustre IO Operations Rate
 ```prometheus
-sum by(target) (rate(clustorstor_lustre_read_ops[5m]))
-sum by(target) (rate(clustorstor_lustre_write_ops[5m]))
+sum by(target) (rate(clusterstor_lustre_read_ops[5m]))
+sum by(target) (rate(clusterstor_lustre_write_ops[5m]))
 ```
 
 ### Node Health Status
 ```prometheus
-clustorstor_node_health{health="OK"}
+clusterstor_node_health{health="OK"}
 ```
 
 ## Documentation

@@ -49,7 +49,7 @@ $ python hpe-redfish-exporter-wrapper.py
 ### With custom configuration:
 ```console
 $ hpe-redfish-exporter \
-  --redfish-host "https://your-clustorstor:8081" \
+  --redfish-host "https://your-clusterstor:8081" \
   --listen-addr "0.0.0.0" \
   --listen-port 9223 \
   --auth-file "/path/to/auth.json" \
