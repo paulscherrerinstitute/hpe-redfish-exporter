@@ -473,7 +473,7 @@ class MetricsCollector:
                                     f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_bytes{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
                                     numeric_value,
                                     "gauge",
-                                    f"{clean_metric_name_result.capitalize().replace("_", " ")} in bytes"
+                                    f"{clean_metric_name_result.capitalize().replace('_', ' ')} in bytes"
                                 )
                             elif clean_metric_name_result in [
                                 "free_inodes",
@@ -484,7 +484,7 @@ class MetricsCollector:
                                     f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
                                     numeric_value,
                                     "gauge",
-                                    f"{clean_metric_name_result.capitalize().replace("_", " ")} count"
+                                    f"{clean_metric_name_result.capitalize().replace('_', ' ')} count"
                                 )
                             elif clean_metric_name_result == "num_exports":
                                 self._add_metric(
