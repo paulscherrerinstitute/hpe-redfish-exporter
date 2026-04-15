@@ -414,10 +414,12 @@ class MetricsCollector:
                 continue
 
             # Get lustre MDT/OST metrics
-            lustre_fs_info = data.get("Oem", {}).get("Lustre", {})
+            lustre_fs_oem_info = data.get("Oem", {})
+            lustre_fs_info = lustre_fs_oem_info.get("Lustre", {})
             lustre_fs_name = lustre_fs_info.get("FsName", "unknown")
             lustre_target = lustre_fs_info.get("TargetName", "unknown")
             lustre_target_type = lustre_fs_info.get("TargetType", "unknown")
+            lustre_target_hostname = lustre_fs_oem_info.get("Hostname", "unknown")
             lustre_stats = lustre_fs_info.get("Statistics", {})
 
             # Collect individual target metrics (IOPS, bandwidth, etc.)
@@ -441,6 +443,7 @@ class MetricsCollector:
                             labels = {
                                 "filesystem": lustre_fs_name,
                                 "target": lustre_target,
+                                "hostname": lustre_target_hostname,
                                 "type": lustre_target_type,
                                 "metric": clean_metric_name_result,
                             }
