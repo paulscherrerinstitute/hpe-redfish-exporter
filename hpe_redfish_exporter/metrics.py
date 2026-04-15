@@ -439,17 +439,17 @@ class MetricsCollector:
                             # Convert string value to numeric
                             numeric_value = float(stat_value)
 
-                            # Create appropriate Prometheus metric based on metric type
+                            # Shared labels for metrics
                             labels = {
                                 "filesystem": lustre_fs_name,
                                 "target": lustre_target,
                                 "hostname": lustre_target_hostname,
                                 "type": lustre_target_type,
-                                "metric": clean_metric_name_result,
                             }
 
+                            # Create generic metric with unique labels
                             self._add_metric(
-                                f"hpe_redfish_clusterstor_lustre_metric{prom_kv(labels)}",
+                                f"hpe_redfish_clusterstor_lustre_metric{prom_kv({**labels, "metric": clean_metric_name_result})}",
                                 numeric_value,
                                 "gauge",
                                 "Generic Lustre metric with all labels"
@@ -458,7 +458,7 @@ class MetricsCollector:
                             # Also create specific metrics for common operations
                             if clean_metric_name_result in ["read", "write"]:
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_ops_total{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_ops_total{prom_kv(labels)}",
                                     numeric_value,
                                     "counter",
                                     f"Cumulative {clean_metric_name_result} operations"
@@ -470,7 +470,7 @@ class MetricsCollector:
                                 "available_space",
                             ]:
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_bytes{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_bytes{prom_kv(labels)}",
                                     numeric_value,
                                     "gauge",
                                     f"{clean_metric_name_result.capitalize().replace('_', ' ')} in bytes"
@@ -481,21 +481,21 @@ class MetricsCollector:
                                 "used_inodes",
                             ]:
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}{prom_kv(labels)}",
                                     numeric_value,
                                     "gauge",
                                     f"{clean_metric_name_result.capitalize().replace('_', ' ')} count"
                                 )
                             elif clean_metric_name_result == "num_exports":
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_exports{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clusterstor_lustre_exports{prom_kv(labels)}",
                                     numeric_value,
                                     "gauge",
                                     "Number of exports"
                                 )
                             elif clean_metric_name_result == "percent_free_space":
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_free_space_percent{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clusterstor_lustre_free_space_percent{prom_kv(labels)}",
                                     numeric_value,
                                     "gauge",
                                     "Free space percentage"
