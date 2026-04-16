@@ -4,6 +4,16 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
 
 ## Unreleased
 
+## [2.6.0] - 2026-04-16
+
+### Added
+- **Hostname label**: Added hostname to node statistics and metrics label for better identification
+- **Lustre metrics**: Added missing metrics for top-level Lustre statistics
+
+### Fixed
+- **Python 3.9 compatibility**: Fixed quotation compatibility with Python 3.9
+- **Lustre metric labels**: Fixed generic labels for Lustre metrics
+
 ## [2.5.0] - 2026-03-16
 
 ### Changed

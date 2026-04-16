@@ -73,8 +73,10 @@ class HPERedfishExporterServer(HTTPServer):
 
     def serve_forever(self, poll_interval=0.5):
         """Start serving requests"""
+        ip = str(self.server_address[0])
+        port = int(self.server_address[1])
         print(
-            f"Starting ClusterStor Redfish Exporter on {self.server_address[0]}:{self.server_address[1]}"
+            f"Starting ClusterStor Redfish Exporter on {ip}:{port}"
         )
         super().serve_forever(poll_interval)
 

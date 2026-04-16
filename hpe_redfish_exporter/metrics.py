@@ -2,13 +2,26 @@
 Metrics collection for HPE Redfish Exporter
 """
 
-from typing import List, Dict, Any, Optional, Callable, Tuple
+from typing import List, Dict, Any, Optional, Callable, Tuple, Final
 from .redfish_client import RedfishClientWrapper
 from .utils import prom_kv, clean_metric_name
+from .config import Config
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import itertools
 import threading
 import time
 
+LUSTRE_STAT_NAME_MAP: Final[Dict[str, str]] = {
+    "Max (24 hour) aggregated all OST(s) read_bytes": "24_hrs_read_bytes",
+    "Max (24 hour) aggregated all OST(s) write_bytes": "24_hrs_write_bytes",
+    "Total FS Space Available": "fs_avail_space",
+    "Total Available FS Space Percentage": "fs_avail_space_percent",
+    "Total FS Space": "fs_space",
+    "Total FS Space Used": "fs_used_space",
+    "Total FS MD ops": "fs_metadata_ops",
+    "Total FS Read": "fs_read_ops",
+    "Total FS Write": "fd_write_ops"
+}
 
 class ResponseCache:
     """Cache for top-level Redfish API responses"""
@@ -63,7 +76,7 @@ class ParallelFetcher:
         progress_label: str = "items",
     ) -> List[Any]:
         """Fetch URLs in parallel, calling callback on each result"""
-        results = []
+        results: List[Any] = []
         self._fetch_errors = 0
 
         if not urls:
@@ -121,9 +134,7 @@ class ParallelFetcher:
 class MetricsCollector:
     """Collect metrics from HPE Redfish API"""
 
-    def __init__(self, config: "Config"):
-        from .config import Config
-
+    def __init__(self, config: Config):
         self.config = config
         self.debug_timing = config.debug_timing
         self.client_wrapper = RedfishClientWrapper(
@@ -132,7 +143,11 @@ class MetricsCollector:
             password=config.password,
         )
         self.cache = ResponseCache(ttl=config.cache_ttl)
-        self._parallel_fetcher: Optional[ParallelFetcher] = None
+        self._parallel_fetcher = ParallelFetcher(
+            self.client_wrapper,
+            max_workers=self.config.parallel_workers,
+            debug_timing=self.debug_timing,
+        )
         self._metrics: List[str] = []
         self._unique_metric: set[str] = set()
         self._unique_metric_help: set[str] = set()
@@ -140,9 +155,9 @@ class MetricsCollector:
     def _add_metric(
         self,
         metric: str,
-        value: str,
-        metric_type: str = None,
-        help_text: str = None
+        value: float,
+        metric_type: Optional[str] = None,
+        help_text: Optional[str] = None
     ):
         """Append metrics information for later emitting"""
         if metric in self._unique_metric:
@@ -157,8 +172,8 @@ class MetricsCollector:
             if metric_type:
                 self._metrics.append(f"# TYPE {name} {metric_type}")
             self._unique_metric_help.add(name)
-        self._metrics.append(f"{metric} {value}")
 
+        self._metrics.append(f"{metric} {value}")
         self._unique_metric.add(metric)
 
     def collect(self) -> str:
@@ -173,22 +188,15 @@ class MetricsCollector:
         # Connect to Redfish API
         if not self.client_wrapper.connect():
             self._add_metric(
-                "hpe_redfish_up", "0", "gauge", "Whether the Redfish API is reachable"
+                "hpe_redfish_up", 0, "gauge", "Whether the Redfish API is reachable"
             )
             return "\n".join(self._metrics)
 
         self._add_metric(
-            "hpe_redfish_up", "1", "gauge", "Whether the Redfish API is reachable"
+            "hpe_redfish_up", 1, "gauge", "Whether the Redfish API is reachable"
         )
 
         start_total = time.time()
-
-        # Create parallel fetcher
-        self._parallel_fetcher = ParallelFetcher(
-            self.client_wrapper,
-            max_workers=self.config.parallel_workers,
-            debug_timing=self.debug_timing,
-        )
 
         # Collect storage system metrics
         start = time.time()
@@ -239,7 +247,7 @@ class MetricsCollector:
         if ss is None or ss.status != 200:
             self._add_metric(
                 "hpe_redfish_clusterstor_storage_systems_up",
-                "0",
+                0,
                 "gauge",
                 "Storage systems availability",
             )
@@ -247,7 +255,7 @@ class MetricsCollector:
 
         self._add_metric(
             "hpe_redfish_clusterstor_storage_systems_up",
-            "1",
+            1,
             "gauge",
             "Storage systems availability"
         )
@@ -278,12 +286,21 @@ class MetricsCollector:
             data = node_data["data"]
             node_id = data.get("Id", "unknown")
             node_name = data.get("Name", node_id)
+            node_hostname = data.get("HostName", "unknown")
+            node_serial_number = data.get("SerialNumber", "unknown")
+
+            # shared labels
+            labels = {
+                'node': node_id,
+                'hostname': node_hostname,
+                'serialnumber': node_serial_number,
+            }
 
             # Health status (already collected, but include for completeness)
             health = data.get("Status", {}).get("Health", "Unknown")
             health_value = 1 if health.lower() == "ok" else 0
             self._add_metric(
-                f"hpe_redfish_clusterstor_node_health{prom_kv({'node': node_id, 'health': health})}",
+                f"hpe_redfish_clusterstor_node_health{prom_kv({**labels, 'health': health})}",
                 health_value,
                 "gauge",
                 "Node health status (1=OK, 0=other)"
@@ -292,7 +309,7 @@ class MetricsCollector:
             # Power state
             power_state = data.get("PowerState", "Unknown")
             self._add_metric(
-                f"hpe_redfish_clusterstor_node_power_state{prom_kv({'node': node_id, 'state': power_state})}",
+                f"hpe_redfish_clusterstor_node_power_state{prom_kv({**labels, 'state': power_state})}",
                 1,
                 "gauge",
                 "Node power state"
@@ -302,7 +319,7 @@ class MetricsCollector:
             oem_data = data.get("Oem", {})
             linux_stats = oem_data.get("LinuxStats", {})
 
-            def sanitize(value: str) -> str:
+            def sanitize(value: str) -> float:
                 if "(%)" in value:
                     _tmp_value = value.replace(" (%)", "")
                 elif "(GB)" in value:
@@ -313,14 +330,14 @@ class MetricsCollector:
                 else:
                     _tmp_value = value
 
-                return _tmp_value
+                return float(_tmp_value)
 
             if linux_stats:
                 # CPU metrics
                 cpu_util = linux_stats.get("CPUUtilization")
                 if cpu_util is not None:
                     self._add_metric(
-                        f"hpe_redfish_clusterstor_node_cpu_utilization_percent{prom_kv({'node': node_id})}",
+                        f"hpe_redfish_clusterstor_node_cpu_utilization_percent{prom_kv(labels)}",
                         sanitize(cpu_util),
                         "gauge",
                         "CPU utilization percentage"
@@ -329,7 +346,7 @@ class MetricsCollector:
                 # Memory metrics
                 if "MemoryUtilization" in linux_stats:
                     self._add_metric(
-                        f"hpe_redfish_clusterstor_node_memoryutilization_percent{prom_kv({'node': node_id})}",
+                        f"hpe_redfish_clusterstor_node_memoryutilization_percent{prom_kv(labels)}",
                         sanitize(linux_stats['MemoryUtilization']),
                         "gauge",
                         "Memory utilization percentage"
@@ -341,7 +358,7 @@ class MetricsCollector:
                 ]:
                     if mem_metric[0] in linux_stats:
                         self._add_metric(
-                            f"hpe_redfish_clusterstor_node_{mem_metric[0].lower()}_bytes{prom_kv({'node': node_id})}",
+                            f"hpe_redfish_clusterstor_node_{mem_metric[0].lower()}_bytes{prom_kv(labels)}",
                             sanitize(linux_stats[mem_metric[0]]),
                             mem_metric[1],
                             mem_metric[2]
@@ -355,7 +372,7 @@ class MetricsCollector:
                 ]:
                     if load_metric in linux_stats:
                         self._add_metric(
-                            f"hpe_redfish_clusterstor_node_{load_metric.lower()}{prom_kv({'node': node_id})}",
+                            f"hpe_redfish_clusterstor_node_{load_metric.lower()}{prom_kv(labels)}",
                             sanitize(linux_stats[load_metric]),
                             "gauge",
                             "System load averages"
@@ -368,12 +385,21 @@ class MetricsCollector:
             return
 
         # Get all storage services and their filesystems
-        filesystem_urls = []
+        fs_member_urls: List[str] = []
+        fs_storage_ids: set[str] = set()
+        fs_lustre_ids: set[str] = set()
 
         for store in storage_root.dict.get("Members", []):
             store_url = store.get("@odata.id")
-            store_info = self.client_wrapper.safe_get(store_url)
-            if store_info is None or store_info.status != 200:
+            if store_url:
+                store_info = self.client_wrapper.safe_get(store_url)
+                if store_info is None or store_info.status != 200:
+                    continue
+            else:
+                # capture Redfish storage ID for LustreFS
+                fs_lustre_url = store.get("Lustre Filesystem")
+                if fs_lustre_url:
+                    fs_storage_ids.add(fs_lustre_url.rsplit('/', 1)[-1])
                 continue
 
             store_id = store_info.dict.get("Id")
@@ -388,7 +414,8 @@ class MetricsCollector:
             for fs_member in fs_info.dict.get("Members", []):
                 fs_member_url = fs_member.get("@odata.id")
                 if fs_member_url:
-                    filesystem_urls.append(fs_member_url)
+                    fs_member_urls.append(fs_member_url)
+
 
         # Parallel fetch all filesystems
         def process_fs(url: str, result: Any) -> Optional[Dict]:
@@ -396,14 +423,14 @@ class MetricsCollector:
                 return None
             return {"url": url, "data": result.dict}
 
-        fs_results = self._parallel_fetcher.fetch(
-            filesystem_urls, process_fs, "filesystems"
+        fs_member_results = self._parallel_fetcher.fetch(
+            fs_member_urls, process_fs, "filesystems"
         )
 
         # Process filesystem results
         unique_fs_members: set[str] = set()
-        for fs_data in fs_results:
-            data = fs_data["data"]
+        for fs_member_data in fs_member_results:
+            data = fs_member_data["data"]
             fs_member_id = data.get("Id")
 
             if "FSYS" in fs_member_id:
@@ -414,14 +441,21 @@ class MetricsCollector:
                 continue
 
             # Get lustre MDT/OST metrics
-            lustre_fs_info = data.get("Oem", {}).get("Lustre", {})
-            lustre_fs_name = lustre_fs_info.get("FsName", "unknown")
+            lustre_fs_oem_info = data.get("Oem", {})
+            lustre_fs_info = lustre_fs_oem_info.get("Lustre", {})
+            lustre_fs_name = lustre_fs_info.get("FsName")
+            if lustre_fs_name:
+                fs_lustre_ids.add(lustre_fs_name)
+            else:
+                # XXX maybe we should issue a warning?
+                lustre_fs_name = "unknown"
             lustre_target = lustre_fs_info.get("TargetName", "unknown")
             lustre_target_type = lustre_fs_info.get("TargetType", "unknown")
+            lustre_target_hostname = lustre_fs_oem_info.get("Hostname", "unknown")
             lustre_stats = lustre_fs_info.get("Statistics", {})
 
             # Collect individual target metrics (IOPS, bandwidth, etc.)
-            if lustre_stats and isinstance(lustre_stats, dict):
+            if lustre_stats:
                 for stat_key, stat_value in lustre_stats.items():
                     # Parse statistics in format like "OST0000 read" or "MDT0000 free_space"
                     try:
@@ -437,16 +471,17 @@ class MetricsCollector:
                             # Convert string value to numeric
                             numeric_value = float(stat_value)
 
-                            # Create appropriate Prometheus metric based on metric type
+                            # Shared labels for metrics
                             labels = {
                                 "filesystem": lustre_fs_name,
                                 "target": lustre_target,
+                                "hostname": lustre_target_hostname,
                                 "type": lustre_target_type,
-                                "metric": clean_metric_name_result,
                             }
 
+                            # Create generic metric with unique labels
                             self._add_metric(
-                                f"hpe_redfish_clusterstor_lustre_metric{prom_kv(labels)}",
+                                f"hpe_redfish_clusterstor_lustre_metric{prom_kv({**labels, "metric": clean_metric_name_result})}",
                                 numeric_value,
                                 "gauge",
                                 "Generic Lustre metric with all labels"
@@ -455,7 +490,7 @@ class MetricsCollector:
                             # Also create specific metrics for common operations
                             if clean_metric_name_result in ["read", "write"]:
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_ops_total{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_ops_total{prom_kv(labels)}",
                                     numeric_value,
                                     "counter",
                                     f"Cumulative {clean_metric_name_result} operations"
@@ -467,10 +502,10 @@ class MetricsCollector:
                                 "available_space",
                             ]:
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_bytes{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_bytes{prom_kv(labels)}",
                                     numeric_value,
                                     "gauge",
-                                    f"{clean_metric_name_result.capitalize().replace("_", " ")} in bytes"
+                                    f"{clean_metric_name_result.capitalize().replace('_', ' ')} in bytes"
                                 )
                             elif clean_metric_name_result in [
                                 "free_inodes",
@@ -478,21 +513,21 @@ class MetricsCollector:
                                 "used_inodes",
                             ]:
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}{prom_kv(labels)}",
                                     numeric_value,
                                     "gauge",
-                                    f"{clean_metric_name_result.capitalize().replace("_", " ")} count"
+                                    f"{clean_metric_name_result.capitalize().replace('_', ' ')} count"
                                 )
                             elif clean_metric_name_result == "num_exports":
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_exports{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clusterstor_lustre_exports{prom_kv(labels)}",
                                     numeric_value,
                                     "gauge",
                                     "Number of exports"
                                 )
                             elif clean_metric_name_result == "percent_free_space":
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_free_space_percent{prom_kv({'filesystem': lustre_fs_name, 'target': lustre_target, 'type': lustre_target_type})}",
+                                    f"hpe_redfish_clusterstor_lustre_free_space_percent{prom_kv(labels)}",
                                     numeric_value,
                                     "gauge",
                                     "Free space percentage"
@@ -503,7 +538,64 @@ class MetricsCollector:
                         # TODO we should log this
                         continue
 
-                unique_fs_members.add(fs_member_id)
+            unique_fs_members.add(fs_member_id)
+
+        # capture Lustre filesystem-level stats
+        for storage_id, fs_name in itertools.product(fs_storage_ids, fs_lustre_ids):
+            fs_lustre_url = f'/redfish/v1/StorageServices/{storage_id}/FileSystems/{fs_name}'
+            fs_lustre_info = self.client_wrapper.safe_get(fs_lustre_url)
+            if fs_lustre_info is None or fs_lustre_info.status != 200:
+                continue
+
+            fs_lustre_oem = fs_lustre_info.dict.get("Oem", {})
+            fs_lustre_info = fs_lustre_oem.get("Lustre", {})
+            fs_lustre_stats = fs_lustre_info.get("Statistics", {})
+
+            if fs_lustre_stats:
+                for stat_key, stat_value in fs_lustre_stats.items():
+                    try:
+                        # re-format metrics label
+                        metric_name = LUSTRE_STAT_NAME_MAP[stat_key]
+
+                        # Clean up metric name for Prometheus
+                        clean_metric_name_result = clean_metric_name(metric_name)
+
+                        # Convert string value to numeric
+                        numeric_value = float(stat_value)
+
+                        # Create appropriate Prometheus metric based on metric type
+                        labels = {
+                            "filesystem": fs_name,
+                            "storage_id": storage_id,
+                        }
+
+                        # Create generic metric with unique labels
+                        self._add_metric(
+                            f"hpe_redfish_clusterstor_lustre_metric{prom_kv({**labels, "metric": clean_metric_name_result})}",
+                            numeric_value,
+                            "guage",
+                            "Generic Lustre metric with all labels"
+                        )
+
+                        # Also create specific metrics for common operations
+                        if "_percent" in clean_metric_name_result:
+                            self._add_metric(
+                                f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}{prom_kv(labels)}",
+                                numeric_value,
+                                "gauge",
+                                f"gauge of {clean_metric_name_result} percentage"
+                            )
+                        else:
+                            self._add_metric(
+                                f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}{prom_kv(labels)}",
+                                numeric_value,
+                                "gauge",
+                                f"gauge of {clean_metric_name_result}"
+                            )
+                    except (ValueError, IndexError):
+                        # Skip malformed or non-numeric statistics
+                        # TODO we should log this
+                        continue
 
     def _collect_events(self):
         """Collect event service history metrics"""
@@ -550,7 +642,7 @@ class MetricsCollector:
         severities = self._parallel_fetcher.fetch(event_urls, process_event, "events")
 
         # Count by severity
-        sev_count = {}
+        sev_count: Dict[str, int] = {}
         for severity in severities:
             if severity:
                 sev_count[severity] = sev_count.get(severity, 0) + 1

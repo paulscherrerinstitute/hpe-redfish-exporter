@@ -6,6 +6,7 @@ from .http_server import HPERedfishExporterServer
 from .config import Config
 from .metrics import MetricsCollector
 
+from typing import Optional
 
 class HPERedfishExporter:
     """Main exporter class that provides Prometheus metrics endpoint"""
@@ -13,7 +14,7 @@ class HPERedfishExporter:
     def __init__(self, config: Config):
         self.config = config
         self.metrics_collector = MetricsCollector(config)
-        self.server = None
+        self.server: Optional[HPERedfishExporterServer] = None
 
     def run(self):
         """Run the exporter server"""

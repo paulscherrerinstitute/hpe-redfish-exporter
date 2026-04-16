@@ -2,7 +2,7 @@
 Redfish client wrapper for HPE Redfish Exporter
 """
 
-from redfish import redfish_client
+from redfish import redfish_client # type: ignore
 from typing import Optional, Any
 import urllib3
 
@@ -11,13 +11,16 @@ class RedfishClientWrapper:
     """Wrapper for Redfish client with safe operations"""
 
     def __init__(
-        self, base_url: str, username: str = "", password: str = "", timeout: int = 10
+        self, base_url: str,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        timeout: int = 10
     ):
         self.base_url = base_url
         self.username = username
         self.password = password
         self.timeout = timeout
-        self.client = None
+        self.client: Optional[Any] = None
 
     def connect(self) -> bool:
         """Establish connection to Redfish API"""
