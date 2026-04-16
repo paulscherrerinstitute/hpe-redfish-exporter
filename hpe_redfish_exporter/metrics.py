@@ -286,12 +286,21 @@ class MetricsCollector:
             data = node_data["data"]
             node_id = data.get("Id", "unknown")
             node_name = data.get("Name", node_id)
+            node_hostname = data.get("HostName", "unknown")
+            node_serial_number = data.get("SerialNumber", "unknown")
+
+            # shared labels
+            labels = {
+                'node': node_id,
+                'hostname': node_hostname,
+                'serialnumber': node_serial_number,
+            }
 
             # Health status (already collected, but include for completeness)
             health = data.get("Status", {}).get("Health", "Unknown")
             health_value = 1 if health.lower() == "ok" else 0
             self._add_metric(
-                f"hpe_redfish_clusterstor_node_health{prom_kv({'node': node_id, 'health': health})}",
+                f"hpe_redfish_clusterstor_node_health{prom_kv({**labels, 'health': health})}",
                 health_value,
                 "gauge",
                 "Node health status (1=OK, 0=other)"
@@ -300,7 +309,7 @@ class MetricsCollector:
             # Power state
             power_state = data.get("PowerState", "Unknown")
             self._add_metric(
-                f"hpe_redfish_clusterstor_node_power_state{prom_kv({'node': node_id, 'state': power_state})}",
+                f"hpe_redfish_clusterstor_node_power_state{prom_kv({**labels, 'state': power_state})}",
                 1,
                 "gauge",
                 "Node power state"
@@ -328,7 +337,7 @@ class MetricsCollector:
                 cpu_util = linux_stats.get("CPUUtilization")
                 if cpu_util is not None:
                     self._add_metric(
-                        f"hpe_redfish_clusterstor_node_cpu_utilization_percent{prom_kv({'node': node_id})}",
+                        f"hpe_redfish_clusterstor_node_cpu_utilization_percent{prom_kv(labels)}",
                         sanitize(cpu_util),
                         "gauge",
                         "CPU utilization percentage"
@@ -337,7 +346,7 @@ class MetricsCollector:
                 # Memory metrics
                 if "MemoryUtilization" in linux_stats:
                     self._add_metric(
-                        f"hpe_redfish_clusterstor_node_memoryutilization_percent{prom_kv({'node': node_id})}",
+                        f"hpe_redfish_clusterstor_node_memoryutilization_percent{prom_kv(labels)}",
                         sanitize(linux_stats['MemoryUtilization']),
                         "gauge",
                         "Memory utilization percentage"
@@ -349,7 +358,7 @@ class MetricsCollector:
                 ]:
                     if mem_metric[0] in linux_stats:
                         self._add_metric(
-                            f"hpe_redfish_clusterstor_node_{mem_metric[0].lower()}_bytes{prom_kv({'node': node_id})}",
+                            f"hpe_redfish_clusterstor_node_{mem_metric[0].lower()}_bytes{prom_kv(labels)}",
                             sanitize(linux_stats[mem_metric[0]]),
                             mem_metric[1],
                             mem_metric[2]
@@ -363,7 +372,7 @@ class MetricsCollector:
                 ]:
                     if load_metric in linux_stats:
                         self._add_metric(
-                            f"hpe_redfish_clusterstor_node_{load_metric.lower()}{prom_kv({'node': node_id})}",
+                            f"hpe_redfish_clusterstor_node_{load_metric.lower()}{prom_kv(labels)}",
                             sanitize(linux_stats[load_metric]),
                             "gauge",
                             "System load averages"
