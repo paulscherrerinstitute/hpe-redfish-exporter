@@ -5,6 +5,7 @@ Metrics collection for HPE Redfish Exporter
 from typing import List, Dict, Any, Optional, Callable, Tuple, Final
 from .redfish_client import RedfishClientWrapper
 from .utils import prom_kv, clean_metric_name
+from .config import Config
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import itertools
 import threading
@@ -75,7 +76,7 @@ class ParallelFetcher:
         progress_label: str = "items",
     ) -> List[Any]:
         """Fetch URLs in parallel, calling callback on each result"""
-        results = []
+        results: List[Any] = []
         self._fetch_errors = 0
 
         if not urls:
@@ -133,9 +134,7 @@ class ParallelFetcher:
 class MetricsCollector:
     """Collect metrics from HPE Redfish API"""
 
-    def __init__(self, config: "Config"):
-        from .config import Config
-
+    def __init__(self, config: Config):
         self.config = config
         self.debug_timing = config.debug_timing
         self.client_wrapper = RedfishClientWrapper(
@@ -144,7 +143,11 @@ class MetricsCollector:
             password=config.password,
         )
         self.cache = ResponseCache(ttl=config.cache_ttl)
-        self._parallel_fetcher: Optional[ParallelFetcher] = None
+        self._parallel_fetcher = ParallelFetcher(
+            self.client_wrapper,
+            max_workers=self.config.parallel_workers,
+            debug_timing=self.debug_timing,
+        )
         self._metrics: List[str] = []
         self._unique_metric: set[str] = set()
         self._unique_metric_help: set[str] = set()
@@ -152,9 +155,9 @@ class MetricsCollector:
     def _add_metric(
         self,
         metric: str,
-        value: str,
-        metric_type: str = None,
-        help_text: str = None
+        value: float,
+        metric_type: Optional[str] = None,
+        help_text: Optional[str] = None
     ):
         """Append metrics information for later emitting"""
         if metric in self._unique_metric:
@@ -169,8 +172,8 @@ class MetricsCollector:
             if metric_type:
                 self._metrics.append(f"# TYPE {name} {metric_type}")
             self._unique_metric_help.add(name)
-        self._metrics.append(f"{metric} {value}")
 
+        self._metrics.append(f"{metric} {value}")
         self._unique_metric.add(metric)
 
     def collect(self) -> str:
@@ -185,22 +188,15 @@ class MetricsCollector:
         # Connect to Redfish API
         if not self.client_wrapper.connect():
             self._add_metric(
-                "hpe_redfish_up", "0", "gauge", "Whether the Redfish API is reachable"
+                "hpe_redfish_up", 0, "gauge", "Whether the Redfish API is reachable"
             )
             return "\n".join(self._metrics)
 
         self._add_metric(
-            "hpe_redfish_up", "1", "gauge", "Whether the Redfish API is reachable"
+            "hpe_redfish_up", 1, "gauge", "Whether the Redfish API is reachable"
         )
 
         start_total = time.time()
-
-        # Create parallel fetcher
-        self._parallel_fetcher = ParallelFetcher(
-            self.client_wrapper,
-            max_workers=self.config.parallel_workers,
-            debug_timing=self.debug_timing,
-        )
 
         # Collect storage system metrics
         start = time.time()
@@ -251,7 +247,7 @@ class MetricsCollector:
         if ss is None or ss.status != 200:
             self._add_metric(
                 "hpe_redfish_clusterstor_storage_systems_up",
-                "0",
+                0,
                 "gauge",
                 "Storage systems availability",
             )
@@ -259,7 +255,7 @@ class MetricsCollector:
 
         self._add_metric(
             "hpe_redfish_clusterstor_storage_systems_up",
-            "1",
+            1,
             "gauge",
             "Storage systems availability"
         )
@@ -314,7 +310,7 @@ class MetricsCollector:
             oem_data = data.get("Oem", {})
             linux_stats = oem_data.get("LinuxStats", {})
 
-            def sanitize(value: str) -> str:
+            def sanitize(value: str) -> float:
                 if "(%)" in value:
                     _tmp_value = value.replace(" (%)", "")
                 elif "(GB)" in value:
@@ -325,7 +321,7 @@ class MetricsCollector:
                 else:
                     _tmp_value = value
 
-                return _tmp_value
+                return float(_tmp_value)
 
             if linux_stats:
                 # CPU metrics
@@ -637,7 +633,7 @@ class MetricsCollector:
         severities = self._parallel_fetcher.fetch(event_urls, process_event, "events")
 
         # Count by severity
-        sev_count = {}
+        sev_count: Dict[str, int] = {}
         for severity in severities:
             if severity:
                 sev_count[severity] = sev_count.get(severity, 0) + 1
