@@ -8,7 +8,7 @@ EnvironmentFile=-/etc/sysconfig/hpe-redfish-exporter
 EnvironmentFile=-/etc/default/hpe-redfish-exporter
 DynamicUser=yes
 LoadCredential=auth:/etc/hpe-redfish-exporter/auth
-ExecStart=/usr/bin/hpe-redfish-exporter --redfish-host ${REDFISH_HOST} --auth-file ${CREDENTIALS_DIRECTORY}/auth
+ExecStart=/usr/bin/hpe-redfish-exporter --redfish-hosts ${REDFISH_HOSTS} --auth-file ${CREDENTIALS_DIRECTORY}/auth
 
 [Install]
 WantedBy=multi-user.target

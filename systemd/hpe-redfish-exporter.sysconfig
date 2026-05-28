@@ -1,1 +1,2 @@
-REDFISH_HOST="localhost:8081"
+# you can specify multiple HA hosts using commas
+REDFISH_HOSTS="localhost:8081"

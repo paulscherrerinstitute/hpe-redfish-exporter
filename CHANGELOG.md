@@ -4,6 +4,12 @@ All notable changes to the HPE Redfish Exporter project will be documented in th
 
 ## Unreleased
 
+## [2.6.1] - 2026-05-28
+
+### Added
+- **Support Failover**: Add support for defining multiple redfish hosts as part of a high-availability cluster; the client will now
+  automatically cycle through the list of hosts until it connects or hangup the connection.
+
 ## [2.6.0] - 2026-04-16
 
 ### Added

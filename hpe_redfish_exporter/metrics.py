@@ -138,7 +138,7 @@ class MetricsCollector:
         self.config = config
         self.debug_timing = config.debug_timing
         self.client_wrapper = RedfishClientWrapper(
-            base_url=config.redfish_host,
+            urls=config.redfish_hosts,
             username=config.username,
             password=config.password,
         )
@@ -490,9 +490,9 @@ class MetricsCollector:
                             # Also create specific metrics for common operations
                             if clean_metric_name_result in ["read", "write"]:
                                 self._add_metric(
-                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_ops_total{prom_kv(labels)}",
+                                    f"hpe_redfish_clusterstor_lustre_{clean_metric_name_result}_ops{prom_kv(labels)}",
                                     numeric_value,
-                                    "counter",
+                                    "gauge",
                                     f"Cumulative {clean_metric_name_result} operations"
                                 )
                             elif clean_metric_name_result in [

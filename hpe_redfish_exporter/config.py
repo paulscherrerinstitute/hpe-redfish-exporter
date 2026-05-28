@@ -4,7 +4,7 @@ Configuration handling for HPE Redfish Exporter
 
 import json
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, List, Dict, Any
 
 
 class Config:
@@ -12,7 +12,7 @@ class Config:
 
     def __init__(
         self,
-        redfish_host: str = "https://localhost:8081",
+        redfish_hosts: List[str] = ["https://localhost:8081"],
         exporter_addr: str = "127.0.0.1",
         exporter_port: int = 9223,
         auth_file: str = ".hpe_redfish_auth",
@@ -21,7 +21,7 @@ class Config:
         events_limit: Optional[int] = None,
         debug_timing: bool = False,
     ):
-        self.redfish_host = redfish_host
+        self.redfish_hosts = redfish_hosts
         self.exporter_addr = exporter_addr
         self.exporter_port = exporter_port
         self.auth_file = auth_file
@@ -65,7 +65,7 @@ class Config:
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary"""
         return {
-            "redfish_host": self.redfish_host,
+            "redfish_hosts": self.redfish_hosts,
             "exporter_addr": self.exporter_addr,
             "exporter_port": self.exporter_port,
             "auth_file": self.auth_file,

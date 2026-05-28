@@ -16,9 +16,9 @@ def main():
 
     # Configuration arguments
     parser.add_argument(
-        "--redfish-host",
+        "--redfish-hosts",
         default="https://localhost:8081",
-        help="Redfish API base URL (default: https://localhost:8081)",
+        help="Redfish API base URLs, comma seperated (default: %(default)s)",
     )
     parser.add_argument(
         "--listen-addr",
@@ -68,9 +68,12 @@ def main():
         print(f"HPE Redfish Exporter v{__version__}")
         sys.exit(0)
 
+    # parse the redfish hosts out
+    redfish_hosts = args.redfish_hosts.split(',')
+
     # Create configuration
     config = Config(
-        redfish_host=args.redfish_host,
+        redfish_hosts=redfish_hosts,
         exporter_addr=args.listen_addr,
         exporter_port=args.listen_port,
         auth_file=args.auth_file,

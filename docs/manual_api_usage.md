@@ -28,7 +28,7 @@ from hpe_redfish_exporter import HPERedfishExporter, Config
 
 # Create configuration
 config = Config(
-    redfish_host="https://localhost:8081",
+    redfish_hosts=["https://localhost:8081"],
     exporter_addr="127.0.0.1", 
     exporter_port=9223,
     auth_file=".hpe_redfish_auth"
