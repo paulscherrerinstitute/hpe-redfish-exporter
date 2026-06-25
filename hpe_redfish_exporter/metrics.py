@@ -481,7 +481,7 @@ class MetricsCollector:
 
                             # Create generic metric with unique labels
                             self._add_metric(
-                                f"hpe_redfish_clusterstor_lustre_metric{prom_kv({**labels, "metric": clean_metric_name_result})}",
+                                f"hpe_redfish_clusterstor_lustre_metric{prom_kv({**labels, 'metric': clean_metric_name_result})}",
                                 numeric_value,
                                 "gauge",
                                 "Generic Lustre metric with all labels"
@@ -571,7 +571,7 @@ class MetricsCollector:
 
                         # Create generic metric with unique labels
                         self._add_metric(
-                            f"hpe_redfish_clusterstor_lustre_metric{prom_kv({**labels, "metric": clean_metric_name_result})}",
+                            f"hpe_redfish_clusterstor_lustre_metric{prom_kv({**labels, 'metric': clean_metric_name_result})}",
                             numeric_value,
                             "guage",
                             "Generic Lustre metric with all labels"
